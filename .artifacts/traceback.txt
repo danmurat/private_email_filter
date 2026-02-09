@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/compilation/module_compiler.py", line 405, in compile
+    function.evaluate("Compiling", inputset, configuration, function_artifacts)
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/compilation/module_compiler.py", line 233, in evaluate
+    self.trace(first_sample, artifacts)
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/compilation/module_compiler.py", line 146, in trace
+    self.graph = Tracer.trace(self.function, parameters, location=self.location)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/tracing/tracer.py", line 82, in trace
+    output_tracers: Any = function(**arguments)
+                          ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/ml/sklearn/base.py", line 2060, in inference_to_compile
+    return self._inference(q_X)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/ml/sklearn/base.py", line 2069, in _inference
+    y_pred = q_X @ self._q_weights - self._weight_quantizer.zero_point * numpy.sum(
+             ~~~~^~~~~~~~~~~~~~~~~
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/tracing/tracer.py", line 554, in __matmul__
+    return Tracer._trace_numpy_operation(np.matmul, self, self.sanitize(other))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/concrete/fhe/tracing/tracer.py", line 424, in _trace_numpy_operation
+    evaluation = operation(*sample, **kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, with gufunc signature (n?,k),(k,m?)->(n?,m?) (size 50 is different from 5177)

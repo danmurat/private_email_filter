@@ -27,12 +27,6 @@ def getIndexedDict():
 # def load():
 #     return h.loadModel("svm")
 
-def client(name) -> tuple:
-    client = FHEModelClient(path_dir=name, key_dir="client_key")
-    eval_keys = client.get_serialized_evaluation_keys()
-
-    return (client, eval_keys)
-
 def handleLoading(message):
     dots = [".", "..", "..."]
     for i in range(12):
@@ -56,6 +50,7 @@ pauses and questions ("send to server?" for example). Should completely be ran i
 (slow but not too slow, we only have 10mins to speak).
 """
 
+# TODO: add an "inference: {result}seconds" when classifying
 if __name__ == "__main__":
     handleLoading("Recieving email") 
 
@@ -70,7 +65,9 @@ if __name__ == "__main__":
     indexed100 = getIndexedDict() # working!
     ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
 
-    cli, eval_keys = client("svm")
+    print("ham vector shape = ", ham_email_vector.shape)
+
+    cli, eval_keys = h.client("svm")
 
     choice = input("\nWould you like to encrypt the email? (y/n): \n")
     if choice == "n":

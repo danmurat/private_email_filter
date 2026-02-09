@@ -1,6 +1,7 @@
 from concrete.ml.sklearn.svm import LinearSVC as ConcreteLinearSVC
 from concrete.ml.sklearn import LogisticRegression as ConcreteLogisticRegression
 from concrete.ml.deployment import FHEModelDev, FHEModelClient, FHEModelServer
+from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, f1_score, make_scorer
 from PreProcess import PreProcess
 import pickle
@@ -13,6 +14,8 @@ class HandleModel:
         self.y_train = None
         self.X_test = None
         self.y_test = None
+        self.reduced_X_train = None
+        self.reduced_X_test = None
         self.p = p
 
         #self.p.preprocess() # run outside method!
@@ -24,6 +27,21 @@ class HandleModel:
         self.X_test = self.p.getVectorisedTestText()
         self.y_test = self.p.getTestingData()["label"]
 
+    def pcaReduce(self, components):
+        pca = PCA(n_components=components)
+        pca.fit(self.X_train)
+        self.reduced_X_train = pca.transform(self.X_train)
+        self.reduced_X_test = pca.transform(self.X_test)
+
+        print("saving pca model...")
+        self.saveModelPickle(pca, "pca")
+        print("pca saved!")
+
+    def pcaReduceEmail(self, email):
+        pca = self.loadModelPickle("pca")
+        reduced_email = pca.transform(email)
+
+        return reduced_email
 
     def trainSVM(self) -> ConcreteLinearSVC:
         svm = ConcreteLinearSVC(max_iter=400, n_bits=8)
@@ -36,11 +54,28 @@ class HandleModel:
         log.fit(self.X_train, self.y_train)
 
         return log
+    
+    def pcaTrainSvm(self):
+        svm = ConcreteLinearSVC(max_iter=400, n_bits=8)
+        svm.fit(self.reduced_X_train, self.y_train)
+
+        return svm
+    
+    def pcaTrainLogistic(self) -> ConcreteLogisticRegression:
+        log = ConcreteLogisticRegression(n_bits=8)
+        log.fit(self.reduced_X_train, self.y_train)
+
+        return log
+ 
 
     # required for fhe
     # this might not work if arguments are passed as copies?
     def compileModel(self, model):
         circuit = model.compile(self.X_train)
+    
+    def pcaCompileModel(self, model):
+        circuit = model.compile(self.reduced_X_train)
+
 
     def saveModelPickle(self, model, name):
         with open(f"{name}.pkl", "wb") as file:
@@ -60,11 +95,24 @@ class HandleModel:
 
         return server
     
+    def client(self, name) -> tuple:
+        client = FHEModelClient(path_dir=name, key_dir=f"client_key_{name}")
+        eval_keys = client.get_serialized_evaluation_keys()
+
+        return (client, eval_keys)
+        
     def testAccuracy(self, model):
         model_pred = model.predict(self.X_test)
         score = accuracy_score(self.y_test, model_pred)
 
         print(f"Accuracy = {score}%")
+    
+    def pcaTestAccuracy(self, model):
+        model_pred = model.predict(self.reduced_X_test)
+        score = accuracy_score(self.y_test, model_pred)
+
+        print(f"Accuracy = {score}%")
+
 
     def classifyPlain(self, model, vectorised_text, label):
         model_pred = model.predict(vectorised_text)
