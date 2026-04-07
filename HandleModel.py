@@ -2,6 +2,8 @@ from concrete.ml.sklearn.svm import LinearSVC as ConcreteLinearSVC
 from concrete.ml.sklearn import LogisticRegression as ConcreteLogisticRegression
 from concrete.ml.deployment import FHEModelDev, FHEModelClient, FHEModelServer
 from sklearn.decomposition import PCA
+# import sklean linear svm
+from sklearn.svm import LinearSVC as SklearnLinearSVC
 from sklearn.metrics import accuracy_score, f1_score, make_scorer
 from PreProcess import PreProcess
 import pickle
@@ -26,6 +28,9 @@ class HandleModel:
         self.y_train = self.p.getTrainingData()["label"]
         self.X_test = self.p.getVectorisedTestText()
         self.y_test = self.p.getTestingData()["label"]
+
+    def getData(self):
+        return (self.X_train, self.y_train, self.X_test, self.y_test)
 
     def pcaReduce(self, components):
         pca = PCA(n_components=components)

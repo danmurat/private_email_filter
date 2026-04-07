@@ -52,64 +52,64 @@ pauses and questions ("send to server?" for example). Should completely be ran i
 
 # TODO: add an "inference: {result}seconds" when classifying
 if __name__ == "__main__":
-    handleLoading("Recieving email") 
+    # handleLoading("Recieving email") 
 
-    ham_email = p.loadSingleHamEmail(7311)
-    ham_email_label = ham_email["label"].iloc[0] # of course = 0
+    # ham_email = p.loadSingleHamEmail(7311)
+    # ham_email_label = ham_email["label"].iloc[0] # of course = 0
 
-    print("Email: \n", ham_email["text"].iloc[0])
+    #print("Email: \n", ham_email["text"].iloc[0])
 
     # pass these into preprocess (single), so it returns vectorised set.
 
     # these are done "under the hood"
     indexed100 = getIndexedDict() # working!
-    ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
+    #ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
 
-    print("ham vector shape = ", ham_email_vector.shape)
+    # print("ham vector shape = ", ham_email_vector.shape)
 
     cli, eval_keys = h.client("svm")
 
-    choice = input("\nWould you like to encrypt the email? (y/n): \n")
-    if choice == "n":
-        sys.exit()
+    # choice = input("\nWould you like to encrypt the email? (y/n): \n")
+    # if choice == "n":
+    #     sys.exit()
 
-    handleLoading("Encrypting email")
-    enc_ham_data = cli.quantize_encrypt_serialize(ham_email_vector)
-    print(f"\n\nEncrypted data: \n\n {enc_ham_data[:350]}\n...truncated...")
+    # handleLoading("Encrypting email")
+    # enc_ham_data = cli.quantize_encrypt_serialize(ham_email_vector)
+    # print(f"\n\nEncrypted data: \n\n {enc_ham_data[:350]}\n...truncated...")
 
-    # we pass this into the model, and the model will give us a result "spam"/"ham" and
-    # show this
+    # # we pass this into the model, and the model will give us a result "spam"/"ham" and
+    # # show this
 
-    choice = input("\nSend to server for classification? (y/n): \n")
-    if choice == "n":
-        sys.exit()
+    # choice = input("\nSend to server for classification? (y/n): \n")
+    # if choice == "n":
+    #     sys.exit()
 
-    handleLoading("Sending encrypted data")
+    # handleLoading("Sending encrypted data")
     server_model = h.loadModel("svm")
     server_model.load()
 
-    # above and below loading conjoin..
-    print("\n")
+    # # above and below loading conjoin..
+    # print("\n")
 
-    handleLoading("classifying")
-    enc_result = server_model.run(enc_ham_data, eval_keys)
-    print("\nResult recieved!\n")
-    print(f"\nEncrypted result: \n\n {enc_result[:350]}\n...truncated...")
+    # handleLoading("classifying")
+    # enc_result = server_model.run(enc_ham_data, eval_keys)
+    # print("\nResult recieved!\n")
+    # print(f"\nEncrypted result: \n\n {enc_result[:350]}\n...truncated...")
 
-    choice = input("\nDecrypt result? (y/n): \n")
-    if choice == "n":
-        sys.exit()
+    # choice = input("\nDecrypt result? (y/n): \n")
+    # if choice == "n":
+    #     sys.exit()
 
-    handleLoading("decrypting result")
-    result_probabilities = cli.deserialize_decrypt_dequantize(enc_result)
-    result = np.argmax(result_probabilities)
-    printResult(result)
+    # handleLoading("decrypting result")
+    # result_probabilities = cli.deserialize_decrypt_dequantize(enc_result)
+    # result = np.argmax(result_probabilities)
+    # printResult(result)
 
 
-    choice = input("\n\nContinue? (y/n): \n")
+    # choice = input("\n\nContinue? (y/n): \n")
 
-    if choice == "n":
-        sys.exit()
+    # if choice == "n":
+    #     sys.exit()
 
     # handles same as above but for spam 
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     
     spam_email = p.loadSingleSpamEmail(27070)
     spam_email_label = spam_email["label"].iloc[0]
-    print("Email: \n", spam_email["text"].iloc[0])
+    print("\n", spam_email["text"].iloc[0])
 
     spam_email_vector = p.preprocessSingleEmail(spam_email, indexed100)
 

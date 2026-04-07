@@ -1,6 +1,11 @@
 from PreProcess import PreProcess
 from HandleModel import HandleModel
 
+"""
+This file intends to actually train and save any HE compatable ML models,
+so that we can use and test (in demo or benchmark.py).
+"""
+
 p = PreProcess()
 p.preprocess()
 h = HandleModel(p)
