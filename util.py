@@ -1,4 +1,7 @@
 import pickle
+import torch
+import pandas as pd
+import json
 from sklearn.decomposition import PCA
 
 """
@@ -14,6 +17,15 @@ def loadModelPickle(name):
     with open(f"pickle_objects/{name}.pkl", "rb") as file:
         return pickle.load(file)
 
+def convertToTorchTensors(X_train, y_train, X_test, y_test, red_X_train, red_X_test) -> tuple:
+    t_X_train = torch.tensor(X_train).float()
+    t_y_train = torch.tensor(y_train).float().unsqueeze(1) # adds extra dimension [n, 1] so that it corresponds with X when training
+    t_X_test = torch.tensor(X_test).float()
+    t_y_test = torch.tensor(y_test).float().unsqueeze(1)
+    t_red_X_train = torch.tensor(red_X_train).float()
+    t_red_X_test = torch.tensor(red_X_test).float()
+
+    return t_X_train, t_y_train, t_X_test, t_y_test, t_red_X_train, t_red_X_test
 
 # pca was saved with n_components=200
 def pca_data(X_train, X_test) -> tuple:
@@ -21,7 +33,7 @@ def pca_data(X_train, X_test) -> tuple:
     red_X_train = pca.transform(X_train)
     red_X_test = pca.transform(X_test)
 
-    return (red_X_train, red_X_test)
+    return red_X_train, red_X_test
 
 # incase we ever need to run again/change params
 def train_pca():
@@ -34,3 +46,34 @@ def model_data_path():
 
 def reduced_model_data_path():
     return "preprocessed_data/reduced_model_data"
+
+
+def load_single_spam_email_df_test(id):
+    test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    test_spam = test.loc[test["label"] == 1]
+
+    return test_spam.loc[test_spam["message_id"] == id]
+
+# df for pandas dataframe
+def load_single_spam_email_df(i):
+    if i > 1000:
+        raise ValueError(f"There's only 1000 spam examples. You selected {i} - pick <= 1000")
+
+    test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    test_spam = test.loc[test["label"] == 1]
+
+    return test_spam.iloc[[i]] # iloc selects for actual row index (keep in [[]] to preserve outer list - won't break preprocessing this way)
+
+
+# for preprocessing single email during demo
+def getIndexedDict():
+    with open("indexed100.json", "r") as file:
+        return json.load(file)
+
+
+def load_single_ham_email(id):
+    test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    test_ham = test.loc[test["label"] == 0]
+    #print(test_ham)
+
+    return test_ham.loc[test_ham["message_id"] == id]

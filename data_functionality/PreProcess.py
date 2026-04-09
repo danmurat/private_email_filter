@@ -181,19 +181,7 @@ class PreProcess:
 
         return (train, test)
 
-    def loadSingleSpamEmail(self, id):
-        test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
-        test_spam = test.loc[test["label"] == 1]
-        #print(test_spam)
 
-        return test_spam.loc[test_spam["message_id"] == id]
-    
-    def loadSingleHamEmail(self, id):
-        test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
-        test_ham = test.loc[test["label"] == 0]
-        #print(test_ham)
-
-        return test_ham.loc[test_ham["message_id"] == id]
     
 
     def _saveIndexedWords100(self, dict):

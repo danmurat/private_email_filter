@@ -13,11 +13,11 @@ class ZamaModels:
     ZAMA_KEYS_PATH = "zama_keys/client_key_"
 
     # probably delete 
-    def pcaReduceEmail(self, email):
-        pca = self.loadModelPickle("pca")
-        reduced_email = pca.transform(email)
+    # def pcaReduceEmail(self, email):
+    #     pca = self.loadModelPickle("pca")
+    #     reduced_email = pca.transform(email)
 
-        return reduced_email
+    #     return reduced_email
 
     def trainSVM(self, X_train, y_train) -> ConcreteLinearSVC:
         svm = ConcreteLinearSVC(max_iter=400, n_bits=8)

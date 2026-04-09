@@ -1,9 +1,9 @@
 from PreProcess import PreProcess
 from HandleModel import HandleModel
 from concrete.ml.deployment import FHEModelClient
-import json
 import numpy as np
 import sys
+import util
 import time
 
 p = PreProcess()
@@ -19,10 +19,6 @@ h = HandleModel(p)
 # # these indexes arn't split 0..2000! If i access [2] it's an error because it's spam, not ham!
 # def testHam():
 #     p.preprocessSingleEmail(1998, False)
-
-def getIndexedDict():
-    with open("indexed100.json", "r") as file:
-        return json.load(file)
 
 # def load():
 #     return h.loadModel("svm")
@@ -62,7 +58,7 @@ if __name__ == "__main__":
     # pass these into preprocess (single), so it returns vectorised set.
 
     # these are done "under the hood"
-    indexed100 = getIndexedDict() # working!
+    indexed100 = util.getIndexedDict() # working!
     #ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
 
     # print("ham vector shape = ", ham_email_vector.shape)
@@ -115,7 +111,7 @@ if __name__ == "__main__":
 
     handleLoading("Recieving email") 
     
-    spam_email = p.loadSingleSpamEmail(27070)
+    spam_email = util.load_single_spam_email_df(27070)
     spam_email_label = spam_email["label"].iloc[0]
     print("\n", spam_email["text"].iloc[0])
 

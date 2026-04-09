@@ -2,6 +2,7 @@ from data_functionality.ModelData import ModelData
 from data_functionality.ReducedModelData import ReducedModelData
 from data_functionality.PreProcess import PreProcess
 from ZamaModels import ZamaModels
+from TenSealModels import TenSealModels
 import util
 
 """
@@ -19,8 +20,17 @@ def main():
 
     # 9th apr: Changes to code-base working. Zama models training and saving as should. No more pre-process repeats.
 
+    #tsTrainAndSave() # working
+
+
     print("\n\nModel setup done.\n")
 
+
+model_data = util.loadModelPickle(util.model_data_path())
+reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
+X_train, y_train, X_test, y_test = model_data.get_all_data()
+red_X_train, red_X_test = reduced_model_data.get_all_data()
+t_X_train, t_y_train, t_X_test, t_y_test, t_red_X_train, t_red_X_test = util.convertToTorchTensors(X_train, y_train, X_test, y_test, red_X_train, red_X_test)
 
 # to quickly load all data later, instead of repeating the pre-process step which takes 15 seconds each time
 def preprocess_and_save():
@@ -46,11 +56,6 @@ def preprocess_and_save():
 
 def zamaTrainAndSave():
     z = ZamaModels()
-    model_data = util.loadModelPickle(util.model_data_path())
-    X_train = model_data.get_X_train()
-    y_train = model_data.get_y_train()
-    X_test = model_data.get_X_test()
-    y_test = model_data.get_y_test()
 
     print("training svm model...")
     svm = z.trainSVM(X_train, y_train)
@@ -74,12 +79,6 @@ def zamaTrainAndSave():
 
 def zamaPlainTrainAndSave():
     z = ZamaModels()
-    model_data = util.loadModelPickle(util.model_data_path())
-    X_train = model_data.get_X_train()
-    y_train = model_data.get_y_train()
-    #print(y_train)
-    X_test = model_data.get_X_test()
-    y_test = model_data.get_y_test()
 
     print("training svm model...")
     svm = z.trainSVM(X_train, y_train)
@@ -105,10 +104,6 @@ def zamaPlainTrainAndSave():
 
 def zamaTrainAndSaveAndTestWithPca():
     z = ZamaModels()
-    model_data = util.loadModelPickle(util.model_data_path())
-    reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
-    y_train = model_data.get_y_train()
-    red_X_train = reduced_model_data.get_red_X_train()
 
     print("training pca'd svm model...")
     svm = z.pcaTrainSvm(red_X_train, y_train)
@@ -135,9 +130,7 @@ def zamaTrainAndSaveAndTestWithPca():
 
 def loadPlainZamaModelAndTest(name):
     z = ZamaModels()
-    model_data = util.loadModelPickle(util.model_data_path())
-    X_test = model_data.get_X_test()
-    y_test = model_data.get_y_test()
+
     print("loading model...")
     model = util.loadModelPickle(name)
     print(f"{name} model loaded!\n")
@@ -148,10 +141,7 @@ def loadPlainZamaModelAndTest(name):
 
 def pcaLoadPlainZamaAndTest(name):
     z = ZamaModels()
-    model_data = util.loadModelPickle(util.model_data_path())
-    reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
-    red_X_test = reduced_model_data.get_red_X_test()
-    y_test = model_data.get_y_test()
+
     print("loading model...")
     model = util.loadModelPickle(name)
     print(f"{name} model loaded!\n")
@@ -159,6 +149,28 @@ def pcaLoadPlainZamaAndTest(name):
     print("testing plaintext accuracy...")
     z.pcaTestPlainAccuracy(model, red_X_test, y_test)
 
+
+# now tenseal compat models
+
+def tsTrainAndSave():
+    ts = TenSealModels()
+
+    print("Training tenseal logistic regression...")
+    ts_log = ts.trainLog(t_X_train, t_y_train, 3000) # 97.55% acc
+    print("training finished.")
+
+    ts.logAccuracy(ts_log, t_X_test, t_y_test)
+
+    print("Training tenseal svm...")
+    ts_svm = ts.trainSVM(t_X_train, t_y_train, 5000) # 97%
+    print("training finished.")
+
+    ts.svmAccuracy(ts_svm, t_X_test, t_y_test)
+
+    print("Saving models with pickle...")
+    util.saveModelPickle(ts_log, "ts_plain_models/log")
+    util.saveModelPickle(ts_svm, "ts_plain_models/svm")
+    print("Tenseal models saved.")
 
 
 if __name__ == "__main__":

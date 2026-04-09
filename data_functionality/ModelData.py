@@ -9,6 +9,9 @@ class ModelData:
         self.y_train = y_train
         self.y_test = y_test
 
+    def get_all_data(self) -> tuple:
+        return (self.X_train, self.y_train, self.X_test, self.y_test)
+
     def get_X_train(self):
         return self.X_train
 

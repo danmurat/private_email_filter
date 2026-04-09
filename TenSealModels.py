@@ -15,34 +15,35 @@ class TenSealModels:
         # from tutorial. This holds all the encryption keys + operations we can do
         # we can test CKKS scheme too!
         self.context = ts.context(ts.SCHEME_TYPE.BFV, poly_modulus_degree=4096, plain_modulus=1032193)
-        self.c = 200.0 # most accurate soft-margin param found so far
+        self.c = 200.0 # most accurate soft-margin param found so far for SVM
 
-
-    def trainLogReg(self, X_train, y_train, epochs):
+    def trainLog(self, X_train, y_train, epochs):
         model = LogisticReg(X_train.shape[1])
         optim = torch.optim.SGD(model.parameters(), lr=1) # gradient descent 
         criterion = torch.nn.BCELoss() # Binary Cross Entropy Loss
 
         # typical "minimise loss", with pytorch handling most of the details..
-        for e in range(epochs):
+        for e in range(epochs + 1):
             optim.zero_grad()
             out = model(X_train)
             loss = criterion(out, y_train)
             loss.backward()
             optim.step()
-            print(f"Loss at epoch {e}: {loss.data}")
+            
+            if e % 100 == 0: 
+                print(f"Loss at epoch {e}: {loss.data}")
 
         return model
 
-    def lrAccuracy(self, pred, actual):
-        correct = torch.abs(actual - pred) < 0.5
-        return correct.float().mean()
+    # def trainLogReg(self, X_train, y_train, epochs):
+    #     model = LogisticReg(X_train.shape[1])
+    #     model.fit(X_train, y_train, epochs) # this creates a new obj again inside the function. Not sure if it'll break?
+    #
+    #     return model
 
-    def testPlainLogReg(self, model, X_test, y_test):
-        y_pred = model(X_test)
-        accuracy = self.lrAccuracy(y_pred, y_test)
-
-        print(f"Logistic reg acc = {accuracy}") 
+    def logAccuracy(self, log_model, X_test, y_test):
+        # i know log_model.blahblah(pass in the same object again...). Bear with
+        log_model.testAccuracy(log_model, X_test, y_test)
     
     
     # epochs=5000 best we've found with step_size=0.001
@@ -52,8 +53,8 @@ class TenSealModels:
 
         return model
 
-    def svmAccuracy(self, ts_svm_model, X, y):
-        ts_svm_model.testAcc(X, y)
+    def svmAccuracy(self, ts_svm_model, X_test, y_test):
+        ts_svm_model.testAcc(X_test, y_test)
 
 
 

@@ -7,7 +7,9 @@ class ReducedModelData:
         self.red_X_train = red_X_train
         self.red_X_test = red_X_test
 
-    
+    def get_all_data(self) -> tuple:
+        return (self.red_X_train, self.red_X_test)
+        
     def get_red_X_train(self):
         return self.red_X_train
 
