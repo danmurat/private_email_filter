@@ -1,0 +1,11 @@
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "C0103",  # snake casing (doesn't like X_train...)
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+    "W0611",  # unused-import (if you prefer another tool for this)
+    # add more symbolic names or codes as you see them
+]
