@@ -131,6 +131,8 @@ class LinearSVM:
         """
         return enc_x_i.dot(w) - b
 
+    # all client has to do is check if the value is positive or negative. Here we just make them equal
+    # to their correct labels for testing
     def client_finish_prediction(self, y_prelim):
         # y_prelim is a list wth 1 value (depending on how we're encrypting!) Right now we have encrypted value (not vector)
         y = 1 if y_prelim[0] >= 0 else 0

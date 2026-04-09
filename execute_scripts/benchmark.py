@@ -5,35 +5,62 @@ import random
 import numpy as np
 import math
 import scipy.stats as st
+import tenseal as ts
 import sys
 
+# selects random index's for us to test (n=30 for a pilot test)
+def randomise(n, X, y) -> tuple:
+    # these might have to be changed to an np.array
+    randomised_X = np.zeros((n, len(X[0])))
+    randomised_y = np.zeros((n, 1))
+    for i in range(n):
+        rand = random.randint(0, 1999) # 2000 is out of bounds..
+        randomised_X[i] = X[rand]
+        randomised_y[i] = y[rand]
+
+    return randomised_X, randomised_y
+
 z = ZamaModels() # just to use the loadModels() method 
-model_data = util.loadModelPickle("model_data")
-reduced_model_data = util.loadModelPickle("reduced_model_data")
+
+# these as global variables, so we can call as needed (without having to pass params)
+model_data = util.loadModelPickle(util.model_data_path())
+reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
+
+X_test = model_data.get_X_test()
+y_test = model_data.get_y_test()
+red_X_test = reduced_model_data.get_red_X_test()
+
+sample_size = 110 # we'll drop the first 10 inferences (incase of cold starts)
+X_rand, y_rand = randomise(sample_size, X_test, y_test)
+red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 
 
+### ---------------- ###
 
-# not sure whether to just train a new one? Or load the saved model and do all the encrypt/decrypt shinanigans
-zama_svm_model = z.loadModel("svm")
-zama_svm_model.load()
-
-zama_log_model = z.loadModel("log")
-zama_log_model.load()
-
-# we need access to the test data. ALL of it
 def main():
-    X_test = model_data.get_X_test()
-    y_test = model_data.get_y_test() # not used yet, but will need when testing for accuracy too
-    sample_size = 110 # we'll drop the first 10 inferences (incase of cold starts)
-    X_rand, y_rand = randomise(sample_size, X_test, y_test)
+    # runModelTesting("zama_svm") # 9th feb benchmarking Plain! not HE!
+    #run_model_testing("zama_log") # working with refactors
+    #run_model_testing("zama_pca_log") # but does it work pca? It does :)
 
-    runModelTesting(X_rand, "svm") # 9th feb benchmarking Plain! not HE!
-    runModelTesting(X_rand, "log")
+    #test_model_accuracy("ts_svm") # 9th apr testing
 
-def runModelTesting(rand_texts, model_name):
+    # TODO: 10th apr
+    # - handle inference testing for tenseal svm
+    # - get encrypted inference implemented for tenseal log
+    # - make inference testing work for both tenseal svm/log
+
+### ---------------- ###
+
+def run_model_testing(model_name):
     print(f"Testing {model_name}")
 
-    inference_times = benchmarkModel(rand_texts, model_name)
+    inference_times = None
+    if model_name[0] == 'z':
+        inference_times = zama_benchmark_model(model_name[5:]) # zama_log -> log
+    elif model_name[0] == 't':
+        inference_times = ts_benchmark_model()
+    else:
+        raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
 
     print(inference_times)
     
@@ -46,6 +73,39 @@ def runModelTesting(rand_texts, model_name):
     print(f"Inference mean: {mean_low}ms-{mean_high}ms, 95% CI")
 
 
+def test_model_accuracy(model_name):
+    accuracy = None
+    if model_name[0] == 'z':
+        accuracy = zama_test_accuracy(model_name[5:]) # zama_log -> log
+    elif model_name[0] == 't':
+        accuracy = ts_test_accuracy(model_name[3:])
+    else:
+        raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
+
+
+# potentially return accuracy values (instead of just printing?). Don't see why I need to do this? Just show once
+# how accurate it is, and save it on paper...
+def ts_test_accuracy(model_name):
+    svm = util.loadModelPickle(f"ts_plain_models/{model_name}")
+    ctx_eval = util.setup_ts_params_svm() # remember to change depending on what the model is (when we test log)
+
+    print("Encrypting test set...")
+    enc_X_test = [ts.ckks_vector(ctx_eval, x.tolist()) for x in X_rand] # might not be x.tolist()
+    print("Test set encrypted.")
+
+    total = len(y_rand)
+    correct_counter = 0
+
+    print("Testing accuracy...")
+
+    for i in range(len(enc_X_test)):
+        enc_prelim_y = svm.enc_prelim_predict(enc_X_test[i])
+        prelim_y = enc_prelim_y.decrypt()
+        pred_y = svm.client_finish_prediction(prelim_y)
+        if pred_y == y_rand[i]:
+            correct_counter += 1
+
+    print(f"\nTENSEAL SVM HE ACCURACY = {correct_counter / total}%")
 
 # prints stuff like mean, sd, variance, etc...
 def getStats(data) -> tuple:
@@ -79,59 +139,24 @@ def getMeanRange(mean, err) -> tuple:
 
 
 # returns n timed inferences
-def benchmarkModel(X_rand, model_name) -> list:
-    cli, eval_keys = z.client(model_name)
-
-    inferenceTimes = []
-
-    model = None
-    pca_model = None
-    if model_name == "svm":
-        model = z.loadModel("svm")
-    elif model_name == "log":
-        model = z.loadModel("log")
-    elif model_name == "pca_svm":
-        model = z.loadModel("pca_svm")
-        pca_model = z.loadModelPickle("pca")
-    elif model_name == "pca_log":
-        model = z.loadModel("pca_log")
-        pca_model = z.loadModelPickle("pca")
-    else:
-        print(f"INCORRECT MODEL SELECTION! (svm) or (log) or (pca_ in front)! Your's was {model_name}")
-        sys.exit()
-
+def zama_benchmark_model(model_name) -> list:
+    model = _load_zama_model(model_name)
     model.load()
 
-    for i in range(len(X_rand)):
-        enc_data = None 
-        if pca_model == None:
-            enc_data = cli.quantize_encrypt_serialize(X_rand[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
-        else:
-            data = pcaReduceEmail(pca_model, X_rand[i:i+1])
-            enc_data = cli.quantize_encrypt_serialize(data)
-        inferenceTimes.append(inferenceTime(model, enc_data, eval_keys))
-        print(f"Inference {i} complete.")
+    inference_times = _zama_inference_test_loop(model, model_name)
 
-    return inferenceTimes[10:] # dropping first 10 elements
+    return inference_times
 
-def benchmarkModelPlain(X_rand, model_name):
+
+# remove svm name after once we have log set up too (just to remind us we're solely testing svm)
+def ts_benchmark_model_svm():
+    pass
+
+def benchmarkModelPlain(model_name):
     inferenceTimes = []
-    model = None
+    model = _load_zama_model(model_name)
     pca_model = None
-    
-    if model_name == "svm":
-        model = z.loadModelPickle("svm")
-    elif model_name == "log":
-        model = z.loadModelPickle("log")
-    elif model_name == "pca_svm":
-        model = z.loadModelPickle("pca_svm")
-        pca_model = z.loadModelPickle("pca")
-    elif model_name == "pca_log":
-        model = z.loadModelPickle("pca_log")
-        pca_model = z.loadModelPickle("pca")
-    else:
-        print(f"INCORRECT MODEL SELECTION! (svm) or (log) or (pca_ in front)! Your's was {model_name}")
-        sys.exit()
+
 
     for i in range(len(X_rand)):
         data = None 
@@ -149,24 +174,21 @@ def benchmarkModelPlain(X_rand, model_name):
 def pcaReduceEmail(pca, vectorised_email):
     return pca.transform(vectorised_email)
 
-# selects random index's for us to test (n=30 for a pilot test)
-def randomise(n, X, y) -> tuple:
-    # these might have to be changed to an np.array
-    randomised_X = np.zeros((n, len(X[0])))
-    randomised_y = np.zeros((n, 1)) 
-    for i in range(n):
-        rand = random.randint(0, 2000)
-        randomised_X[i] = X[rand]
-        randomised_y[i] = y[rand]
-
-    return (randomised_X, randomised_y)
 
 
-def inferenceTime(model, enc_data, eval_keys) -> float:
+def zama_inference_time(model, enc_x, eval_keys) -> float:
     start = time.perf_counter()
-    model.run(enc_data, eval_keys) # we don't care about the result for now
+    model.run(enc_x, eval_keys) # we don't care about the result for now
     end = time.perf_counter()             # but might have to do due diligence and check!
     return end - start
+
+# same idea here (appending svm to the name, till we do log too)
+def ts_inference_time_svm(model, enc_x_i) -> float:
+    start = time.perf_counter()
+    enc_prelim_y = model.enc_prelim_predict(enc_x_i) # client does the decrypt and determining sign, so this is all that's needed
+    end = time.perf_counter()
+    return end - start
+
 
 def inferenceTimePlain(model, data) -> float:
     start = time.perf_counter()
@@ -174,6 +196,45 @@ def inferenceTimePlain(model, data) -> float:
     end = time.perf_counter()
     return end - start
 
+
+# _name() functions here (like private) intended to be used within other functions.
+
+def _load_zama_model(model_name):
+    model = None
+    #pca_model = None # TODO: deal with PCA testing cases
+    if model_name == "svm":
+        model = z.loadModel("svm")
+    elif model_name == "log":
+        model = z.loadModel("log")
+    elif model_name == "pca_svm":
+        model = z.loadModel("pca_svm")
+        #pca_model = util.loadModelPickle("pca")
+    elif model_name == "pca_log":
+        model = z.loadModel("pca_log")
+        #pca_model = util.loadModelPickle("pca") # TODO: fix pca'ing. Just get reduced_X data
+    else:
+        raise ValueError(f"INCORRECT MODEL SELECTION! (svm) or (log) or (pca_ in front)! Your's was {model_name}")
+
+    return model
+
+def _zama_inference_test_loop(model, model_name):
+    cli, eval_keys = z.client(model_name)
+    inference_times = []
+    need_red_x = False
+
+    if model_name[:3] == "pca":
+        need_red_x = True
+
+    for i in range(sample_size):
+        enc_x = None
+        if not need_red_x:
+            enc_x = cli.quantize_encrypt_serialize(X_rand[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
+        else:
+            enc_x = cli.quantize_encrypt_serialize(red_X_rand[i:i+1])
+        inference_times.append(zama_inference_time(model, enc_x, eval_keys))
+        print(f"Inference {i} complete.")
+
+    return inference_times[10:]
 
 
 if __name__ == "__main__":
