@@ -32,7 +32,7 @@ X_test = model_data.get_X_test() # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, 
 y_test = model_data.get_y_test()
 red_X_test = reduced_model_data.get_red_X_test()
 
-sample_size = 610 # we'll drop the first 10 inferences (incase of cold starts)
+sample_size = 310 # we'll drop the first 10 inferences (incase of cold starts)
 X_rand, y_rand = randomise(sample_size, X_test, y_test)
 red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 
@@ -49,8 +49,8 @@ def main():
 
     # TODO: 10th apr
     # - handle inference testing for tenseal svm [done]
-    # - get encrypted inference implemented for tenseal log [in progress]
-    # - make inference testing work for both tenseal svm/log
+    # - get encrypted inference implemented for tenseal log [done]
+    # - make inference testing work for both tenseal svm/log [done]
 
     #run_model_testing("ts_svm") # 10th apr testing 70ms! vs 340ms for zama..
 
@@ -59,6 +59,21 @@ def main():
     #run_model_testing("ts_log") # inference also ~69/70ms (key size: 2^14)
                                 # inference at 24ms if key size = 2^13 rather than
                                 # but input doesn't fit into 2^13, so should theoretically have some accuracy drop (it's like 1-0.5% drop when testing)
+
+
+    # next, pca versions for tenseal!
+
+    #test_model_accuracy("ts_pca_svm") # works. Accuracy for log quite a bit lower though?
+    run_model_testing("ts_pca_svm")
+
+    """
+    pcalog acc = ~90% for sample_size=800 | inference = ~3.85ms for sample_size=300
+    pcasvm acc = ~96% for sample_size=800 | inference = ~3.85ms for sample_size=300
+    
+    vs inferences of ~70ms for the full sized ts models. ~20x speed up on something that was already quick!
+    Means these are 5x quicker than zamas pca'd models, and 100x quicker than the full sized!
+    Annnnndddd.... only 3x slower than plaintext! (1ms inference, from what I wrote in my gregynog slides, so i may be wrong..) 
+    """
 
 
 ### ---------------- ###
@@ -102,12 +117,13 @@ def ts_test_accuracy(model_name):
     ctx_eval = client.setup_ts_params() # remember to change depending on what the model is (when we test log)
 
     isLog = True
-    if model_name == "svm": # potentially make more robust. What if it's neither?
+    if model_name == "svm" or model_name == "pca_svm": # potentially make more robust. What if it's neither?
         isLog = False
 
+    x, y = (red_X_rand, red_y_rand) if _is_pca_model(model_name) else (X_rand, y_rand)
 
     print("Encrypting test set...")
-    enc_x = client.ts_encrypt_x(X_rand, ctx_eval)
+    enc_x = client.ts_encrypt_x(x, ctx_eval)
     print("Test set encrypted.")
 
     total = len(y_rand)
@@ -121,11 +137,11 @@ def ts_test_accuracy(model_name):
         pred_y = None
         if isLog:
             pred_y = client.ts_client_finish_prediction_log(prelim_y)
-            if client.ts_is_correct_prediction_log(y_rand[i], pred_y):
+            if client.ts_is_correct_prediction_log(y[i], pred_y):
                 correct_counter += 1
         else:
             pred_y = client.ts_client_finish_prediction_svm(prelim_y)
-            if client.ts_is_correct_prediction_svm(y_rand[i], pred_y):
+            if client.ts_is_correct_prediction_svm(y[i], pred_y):
                 correct_counter += 1
 
     print(f"\nTENSEAL {model_name} HE ACCURACY = {correct_counter / total}%")
@@ -185,10 +201,10 @@ def getMeanRange(mean, err) -> tuple:
 
 # returns n timed inferences
 def zama_benchmark_model(model_name) -> list:
-    model = _load_zama_model(model_name)
+    model = z.loadModel(model_name)
     model.load()
 
-    inference_times = _zama_inference_test_loop(model, model_name)
+    inference_times = _zama_inference_test_loop(model, model_name, _is_pca_model(model_name))
 
     return inference_times
 
@@ -197,8 +213,8 @@ def zama_benchmark_model(model_name) -> list:
 def ts_benchmark_model(model_name):
     model = util.loadModelPickle(f"ts_plain_models/{model_name}")
 
-    enc_x = client.ts_encrypt_x(X_rand, client.setup_ts_params())
-    # deal with reduced_x at some point!
+    x, ctx = (red_X_rand, client.setup_ts_params_pca()) if _is_pca_model(model_name) else (X_rand, client.setup_ts_params())
+    enc_x = client.ts_encrypt_x(x, ctx)
 
     inference_times = _ts_inference_test_loop(model, enc_x)
 
@@ -206,16 +222,15 @@ def ts_benchmark_model(model_name):
 
 def benchmarkModelPlain(model_name):
     inferenceTimes = []
-    model = _load_zama_model(model_name)
-    pca_model = None
-
+    model = z.loadModel(model_name)
+    is_pca_model = _is_pca_model(model_name)
 
     for i in range(len(X_rand)):
         data = None 
-        if pca_model == None:
+        if not is_pca_model:
             data = X_rand[i:i+1] # i:i+1 preserves (1,n) 2d-ness
         else:
-            data = pcaReduceEmail(pca_model, X_rand[i:i+1])
+            data = red_X_rand[i:i+1]
         inferenceTimes.append(inferenceTimePlain(model, data))
         print(f"Inference {i} complete.")
 
@@ -251,37 +266,17 @@ def inferenceTimePlain(model, data) -> float:
 
 # _name() functions here (like private) intended to be used within other functions.
 
-def _load_zama_model(model_name):
-    model = None
-    #pca_model = None # TODO: deal with PCA testing cases
-    if model_name == "svm":
-        model = z.loadModel("svm")
-    elif model_name == "log":
-        model = z.loadModel("log")
-    elif model_name == "pca_svm":
-        model = z.loadModel("pca_svm")
-        #pca_model = util.loadModelPickle("pca")
-    elif model_name == "pca_log":
-        model = z.loadModel("pca_log")
-        #pca_model = util.loadModelPickle("pca") # TODO: fix pca'ing. Just get reduced_X data
-    else:
-        raise ValueError(f"INCORRECT MODEL SELECTION! (svm) or (log) or (pca_ in front)! Your's was {model_name}")
+def _is_pca_model(model_name) -> bool:
+    return model_name[:3] == "pca"
 
-    return model
-
-
-def _zama_inference_test_loop(model, model_name):
+def _zama_inference_test_loop(model, model_name, is_pca_model):
     cli, eval_keys = z.client(model_name)
     inference_times = []
-    need_red_x = False
-
-    if model_name[:3] == "pca":
-        need_red_x = True
 
     for i in range(sample_size):
         enc_x = None
-        if not need_red_x:
-            enc_x = cli.quantize_encrypt_serialize(X_rand[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
+        if is_pca_model:
+            enc_x = cli.quantize_encrypt_serialize(red_X_rand[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
         else:
             enc_x = cli.quantize_encrypt_serialize(red_X_rand[i:i+1])
         inference_times.append(zama_inference_time(model, enc_x, eval_keys))

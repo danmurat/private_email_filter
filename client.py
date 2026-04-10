@@ -62,6 +62,17 @@ def setup_ts_params():
 
     return ctx_eval
 
+# testing. We should be able to have lower values for this?? We go from dimensions=5000+ to 200
+# this is giving us ~4ms inference. We can't seem to go lower than 2^12 though?
+def setup_ts_params_pca():
+    poly_mod_degree = 2 ** 12 # 2^12 = 4096 basic (must be pow 2) -- lower = more efficient
+    coeff_mod_bit_sizes = [40, 20, 40]
+    ctx_eval = ts.context(ts.SCHEME_TYPE.CKKS, poly_mod_degree, -1, coeff_mod_bit_sizes)
+    ctx_eval.global_scale = 2 ** 10
+    ctx_eval.generate_galois_keys()
+
+    return ctx_eval
+
 # x represents a whole matrix. x_i for single row of the matrix
 def ts_encrypt_x(x, ctx_eval):
     enc_x = [ts.ckks_vector(ctx_eval, i.tolist()) for i in x]

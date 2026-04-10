@@ -23,6 +23,7 @@ def main():
 
     #tsTrainAndSave() # 10th apr test: checking if log working | working!
 
+    #ts_pca_train_and_save() # ts_pca_log = 96.85% | ts_pca_svm = 96%
 
     print("\n\nModel setup done.\n")
 
@@ -172,6 +173,26 @@ def tsTrainAndSave():
     print("Saving models with pickle...")
     util.saveModelPickle(ts_log, "ts_plain_models/log")
     util.saveModelPickle(ts_svm, "ts_plain_models/svm")
+    print("Tenseal models saved.")
+
+def ts_pca_train_and_save():
+    ts = TenSealModels()
+    print("Training tenseal logistic regression...")
+    ts_pre_pca_log = ts.trainLog(t_red_X_train, t_y_train, 3000) # 97.55% acc
+    ts_pca_log = EncLR(ts_pre_pca_log) # here is where we save the weights and allow for encrypted inference
+    print("training finished.")
+
+    ts.logAccuracy(ts_pre_pca_log, t_red_X_test, t_y_test)
+
+    print("Training tenseal svm...")
+    ts_pca_svm = ts.trainSVM(t_red_X_train, t_y_train, 5000) # 97%
+    print("training finished.")
+
+    ts.svmAccuracy(ts_pca_svm, t_red_X_test, t_y_test)
+
+    print("Saving models with pickle...")
+    util.saveModelPickle(ts_pca_log, "ts_plain_models/pca_log")
+    util.saveModelPickle(ts_pca_svm, "ts_plain_models/pca_svm")
     print("Tenseal models saved.")
 
 
