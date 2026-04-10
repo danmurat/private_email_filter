@@ -79,29 +79,3 @@ def load_single_ham_email(id):
 
     return test_ham.loc[test_ham["message_id"] == id]
 
-
-"""
-IMPORTANT
-
-Making sure these params are correct allows the actual encrypted operations to work. Reason why we were
-wildly off was because our input wasn't fitting in the cyphertext, so was missing a lot of info!
-
-The numbers given below also determine how efficient and secure the scheme runs. How does it work? I don't know.
-I guess I'll play around with the numbers at first, until I can find some known optimisations to place.
-
-PCA'd data may be interesting here? for it to run VERY fast?
-"""
-def setup_ts_params_svm():
-    # from tenseal docs:
-    # parameters
-    poly_mod_degree = 2 ** 14 # 2^12 = 4096 basic (must be pow 2) -- lower = more efficient
-    coeff_mod_bit_sizes = [40, 40, 40, 40]
-    # create TenSEALContext
-    ctx_eval = ts.context(ts.SCHEME_TYPE.CKKS, poly_mod_degree, -1, coeff_mod_bit_sizes)
-    # scale of ciphertext to use
-    ctx_eval.global_scale = 2 ** 40
-    # this key is needed for doing dot-product operations
-    ctx_eval.generate_galois_keys()
-
-    return ctx_eval
-

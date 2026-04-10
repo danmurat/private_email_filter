@@ -1,6 +1,7 @@
 import torch
 import util
 import tenseal as ts
+import client
 from TenSealModels import TenSealModels
 from data_functionality.PreProcess import PreProcess
 from ts_compat_models import LinearSVM
@@ -61,11 +62,11 @@ def test_enc_svm():
 
     p = PreProcess() # just for pre-processing single email
 
-    ctx_eval = _setup_ts_params_svm()
+    ctx_eval = client.setup_ts_params_svm()
     indexed100_dict = util.getIndexedDict()
     # spam_email_test = util.load_single_spam_email_df_test(27070)
     # print(spam_email_test)
-    spam_email = util.load_single_spam_email_df(300)
+    spam_email = util.load_single_spam_email_df(902)
     #print(spam_email)
 
     spam_email_label = spam_email["label"].iloc[0]
@@ -79,7 +80,7 @@ def test_enc_svm():
     print("encrypting email...")
     # enc_X_test = [ts.ckks_vector(ctx_eval, x.tolist()) for x in t_X_test] # whole test set
     #print(f"spam vector = {spam_email_vector.flatten()}")
-    enc_X_i = ts.ckks_vector(ctx_eval, spam_email_vector)
+    enc_X_i = client.ts_encrypt_x_i(spam_email_vector, ctx_eval)
     print("test email encrypted.\n")
     print(f"Encrypted email:\n\n{enc_X_i.data}\ntruncated...\n")
 
@@ -87,7 +88,7 @@ def test_enc_svm():
     #prelim_y = svm.enc_prelim_predict(spam_email_vector) # unencrypted prelim calc gives us same value each time (1.9 something)
     prelim_y = enc_prelim_y.decrypt() # client decrypts (1.9 something too now, though it's an approximation)
     print(f"prelim_y = {prelim_y}")
-    y_pred = svm.client_finish_prediction(prelim_y)
+    y_pred = client.ts_client_finish_prediction_svm(prelim_y)
 
     # testing plain model. For some reason re-running sometimes gives an incorrect prediction? Even though
     # we load the same model, with the same data, with the same preprocessing steps?

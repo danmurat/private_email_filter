@@ -29,6 +29,7 @@ class LinearSVM:
     # if y_i == 0, 1 - 0 * (whatever) = 1, max(0,1) = 1 and nothing is learnt for the other end
     # because we never really get a negative number?? but this would pick 0 since it's higher?
     # I don't completely understand, but I'll change 0's to -1's to see if this sorts it.
+    # FIXED: self.c wasn't large enough. Dataset is more mixed, so large c needed (> 100.0)
     def train(self, X, y, epochs):
         y = torch.where(y <= 0.0, torch.tensor(-1.0), torch.tensor(1.0))
         y = y.squeeze()
@@ -55,20 +56,6 @@ class LinearSVM:
 
 
             if e % 100 == 0: 
-                # prev_loss.append(loss)
-                # prev_params.append((self.w, self.b))            
-                # # should never be more than 2 with how we've written
-                # if len(prev_loss) >= 2:
-                #     if prev_loss[0] + 70.0 < prev_loss[1]:
-                #         self.w, self.b = prev_params[0]
-                #         loss = prev_loss[0]
-                #         break
-                #     else:
-                #         # delete [0], so next epoch adds their new [1]
-                #         del prev_loss[0]
-                #         del prev_params[0]
-
-
                 print(f"Loss at epoch {e}: {loss.item()}")
 
         print(f"Final loss at epoch {e}: {loss.item()}")
@@ -117,25 +104,5 @@ class LinearSVM:
         # also, not sure if w/b have to be encrypted too? Shouldn't be.. (you can add plaintext 1's to encrypted vector)
         w = self.w.detach().numpy() # interpreter complaining about requires_grad
         b = self.b.detach().numpy()
-        """
-        w/b do not change. But the below result - despite encrypting the same email - is calculating different results
-        each time.
-        Likely w/b do need to be encrypted in the end, but I don't know why? Since you were able to add plaintext to an
-        encrypted value, and it still work? Though I know the idea of HE is enc(x . y) = x . y, so maybe their example
-        was an exception?
-        
-        Tenseal's example actually evaluates with plain w/b. I'm certainly doing something wrong, but will check if
-        encyrpting w/b changing anythign first (probably not) - INDEED... still wrong...
-        
-        What are we doing??
-        """
+
         return enc_x_i.dot(w) - b
-
-    # all client has to do is check if the value is positive or negative. Here we just make them equal
-    # to their correct labels for testing
-    def client_finish_prediction(self, y_prelim):
-        # y_prelim is a list wth 1 value (depending on how we're encrypting!) Right now we have encrypted value (not vector)
-        y = 1 if y_prelim[0] >= 0 else 0
-        #y = int(torch.sign(y_prelim).item())
-
-        return y

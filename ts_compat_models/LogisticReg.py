@@ -14,24 +14,6 @@ class LogisticReg(torch.nn.Module):
         return torch.sigmoid(self.log_reg(x))
 
 
-    # creating the same object (LogisticReg) within this object seems to break things (accuracy mysteriously drops to 50s)
-    # using trainLog_test() in TenSealModels for now..
-    # def fit(self, X_train, y_train, epochs):
-    #     model = LogisticReg(X_train.shape[1])
-    #     optim = torch.optim.SGD(model.parameters(), lr=1) # gradient descent 
-    #     criterion = torch.nn.BCELoss() # Binary Cross Entropy Loss
-
-    #     # typical "minimise loss", with pytorch handling most of the details..
-    #     for e in range(epochs):
-    #         optim.zero_grad()
-    #         out = model(X_train)
-    #         loss = criterion(out, y_train)
-    #         loss.backward()
-    #         optim.step()
-    #         print(f"Loss at epoch {e}: {loss.data}")
-
-    #     return model
-
     def _accuracy(self, pred, actual):
         correct = torch.abs(actual - pred) < 0.5
         return correct.float().mean()

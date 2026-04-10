@@ -1,6 +1,7 @@
 from data_functionality.ModelData import ModelData
 from data_functionality.ReducedModelData import ReducedModelData
 from data_functionality.PreProcess import PreProcess
+from ts_compat_models.EncLR import EncLR
 from ZamaModels import ZamaModels
 from TenSealModels import TenSealModels
 import util
@@ -20,7 +21,7 @@ def main():
 
     # 9th apr: Changes to code-base working. Zama models training and saving as should. No more pre-process repeats.
 
-    #tsTrainAndSave() # working
+    #tsTrainAndSave() # 10th apr test: checking if log working | working!
 
 
     print("\n\nModel setup done.\n")
@@ -156,10 +157,11 @@ def tsTrainAndSave():
     ts = TenSealModels()
 
     print("Training tenseal logistic regression...")
-    ts_log = ts.trainLog(t_X_train, t_y_train, 3000) # 97.55% acc
+    ts_pre_log = ts.trainLog(t_X_train, t_y_train, 3000) # 97.55% acc
+    ts_log = EncLR(ts_pre_log) # here is where we save the weights and allow for encrypted inference
     print("training finished.")
 
-    ts.logAccuracy(ts_log, t_X_test, t_y_test)
+    ts.logAccuracy(ts_pre_log, t_X_test, t_y_test)
 
     print("Training tenseal svm...")
     ts_svm = ts.trainSVM(t_X_train, t_y_train, 5000) # 97%
