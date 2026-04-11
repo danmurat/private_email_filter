@@ -1,5 +1,6 @@
 import numpy as np
 import tenseal as ts
+import phe as paillier
 """
 Hypotheically, code here represents what the client alone can do. For tenseal models, the server
 would give a preliminary prediction (encrypted), and sent back to the client. To keep things efficient, that is
@@ -82,3 +83,16 @@ def ts_encrypt_x(x, ctx_eval):
 def ts_encrypt_x_i(x_i, ctx_eval):
     enc_x_i = ts.ckks_vector(ctx_eval, x_i)
     return enc_x_i
+
+
+# -- Paillier stuff --
+
+# key length < 4096 for now, since that's too slow
+def pal_gen_keys() -> tuple:
+    return paillier.generate_paillier_keypair(n_length=1024)
+
+def pal_enc_x_i(public_key, x_i):
+    return [public_key.encrypt(n) for n in x_i]
+
+def pal_decrypt_prelim(private_key, enc_prelim_y):
+    return [private_key.decrypt(n) for n in enc_prelim_y]

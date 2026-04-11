@@ -1,9 +1,11 @@
 from data_functionality.ModelData import ModelData
 from data_functionality.ReducedModelData import ReducedModelData
 from data_functionality.PreProcess import PreProcess
+from ts_compat_models.EncSVM import EncSVM
 from ts_compat_models.EncLR import EncLR
 from ZamaModels import ZamaModels
 from TenSealModels import TenSealModels
+from paillier_compat_models.EncLinear import EncLinear
 import util
 
 """
@@ -24,6 +26,12 @@ def main():
     #tsTrainAndSave() # 10th apr test: checking if log working | working!
 
     #ts_pca_train_and_save() # ts_pca_log = 96.85% | ts_pca_svm = 96%
+
+    #tsTrainAndSave() # working. Models saved under Enc objects
+    #ts_pca_train_and_save() # same with pca
+    # did we save w and b's properly? YES
+
+    #pal_save() # working as of 4:13pm 11th apr
 
     print("\n\nModel setup done.\n")
 
@@ -165,10 +173,11 @@ def tsTrainAndSave():
     ts.logAccuracy(ts_pre_log, t_X_test, t_y_test)
 
     print("Training tenseal svm...")
-    ts_svm = ts.trainSVM(t_X_train, t_y_train, 5000) # 97%
+    ts_pre_svm = ts.trainSVM(t_X_train, t_y_train, 5000) # 97%
+    ts_svm = EncSVM(ts_pre_svm)
     print("training finished.")
 
-    ts.svmAccuracy(ts_svm, t_X_test, t_y_test)
+    ts.svmAccuracy(ts_pre_svm, t_X_test, t_y_test)
 
     print("Saving models with pickle...")
     util.saveModelPickle(ts_log, "ts_plain_models/log")
@@ -185,16 +194,60 @@ def ts_pca_train_and_save():
     ts.logAccuracy(ts_pre_pca_log, t_red_X_test, t_y_test)
 
     print("Training tenseal svm...")
-    ts_pca_svm = ts.trainSVM(t_red_X_train, t_y_train, 5000) # 97%
+    ts_pre_pca_svm = ts.trainSVM(t_red_X_train, t_y_train, 5000) # 97%
+    ts_pca_svm = EncSVM(ts_pre_pca_svm)
     print("training finished.")
 
-    ts.svmAccuracy(ts_pca_svm, t_red_X_test, t_y_test)
+    ts.svmAccuracy(ts_pre_pca_svm, t_red_X_test, t_y_test)
 
     print("Saving models with pickle...")
     util.saveModelPickle(ts_pca_log, "ts_plain_models/pca_log")
     util.saveModelPickle(ts_pca_svm, "ts_plain_models/pca_svm")
     print("Tenseal models saved.")
 
+# can just load ts_plain_models (already trained) into EncLinear. All we need is weights/bias
+def pal_save():
+    print("Loading ts compat models for paillier...")
+    ts_log = util.loadModelPickle("ts_plain_models/log")
+    ts_pca_log = util.loadModelPickle("ts_plain_models/pca_log")
+    ts_svm = util.loadModelPickle("ts_plain_models/svm")
+    ts_pca_svm = util.loadModelPickle("ts_plain_models/pca_svm")
+    print("Loaded.")
+
+    # confirm that w's are appropriate lengths
+    print(len(ts_log.w))
+    print(len(ts_pca_log.w))
+    print(len(ts_svm.w))
+    print(len(ts_pca_svm.w))
+
+    pal_log = EncLinear(ts_log)
+    pal_pca_log = EncLinear(ts_pca_log)
+    pal_svm = EncLinear(ts_svm)
+    pal_pca_svm = EncLinear(ts_pca_svm)
+
+    print("Saving paillier models...")
+    util.saveModelPickle(pal_log, "pal_plain_models/log")
+    util.saveModelPickle(pal_pca_log, "pal_plain_models/pca_log")
+    util.saveModelPickle(pal_svm, "pal_plain_models/svm")
+    util.saveModelPickle(pal_pca_svm, "pal_plain_models/pca_svm")
+    print("Models saved.")
+
+
+# added EncSVM to detach.numpy on parameter selection. So Paillier should automatically work for both ts_log and svm
+def resave_ts_svm():
+    ts_pre_svm = util.loadModelPickle("ts_plain_models/svm")
+    ts_pre_pca_svm = util.loadModelPickle("ts_plain_models/pca_svm")
+
+    print(type(ts_pre_pca_svm.w))
+    print(ts_pre_pca_svm.w)
+    print(type(ts_pre_pca_svm.b))
+    #
+    # ts_svm = EncSVM(ts_pre_svm)
+    # ts_pca_svm = EncSVM(ts_pre_pca_svm)
+    #
+    # # now saved objects can call the EncSVM object methods
+    # util.saveModelPickle(ts_svm, "ts_plain_models/svm")
+    # util.saveModelPickle(ts_pca_svm, "ts_plain_models/pca_svm")
 
 if __name__ == "__main__":
     main() 
