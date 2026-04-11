@@ -87,12 +87,26 @@ def ts_encrypt_x_i(x_i, ctx_eval):
 
 # -- Paillier stuff --
 
-# key length < 4096 for now, since that's too slow
+"""
+key length < 4096 for now, since that's too slow
+Paillier apparently does not stop us from creating insecure keys... and 1024 and below are considered insecure now
+(has same underlying concept of prime factorisation thingy as RSA, and 2048 is considered secure)
+
+Using key lengths of 256, 512, 1024 is fine for testing, but testing only. 2048 has to be the option we use
+in our benchmarks.
+"""
 def pal_gen_keys() -> tuple:
-    return paillier.generate_paillier_keypair(n_length=1024)
+    return paillier.generate_paillier_keypair(n_length=2048) # 256 lowest we can go without runtime errors. But is this even secure?
 
 def pal_enc_x_i(public_key, x_i):
     return [public_key.encrypt(n) for n in x_i]
+
+def pal_enc_dataset(public_key, x):
+    enc_x = []
+    for i in range(len(x)):
+        enc_x.append(pal_enc_x_i(public_key, x[i]))
+
+    return enc_x
 
 def pal_decrypt_prelim(private_key, enc_prelim_y):
     return [private_key.decrypt(n) for n in enc_prelim_y]

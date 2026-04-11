@@ -32,7 +32,7 @@ X_test = model_data.get_X_test() # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, 
 y_test = model_data.get_y_test()
 red_X_test = reduced_model_data.get_red_X_test()
 
-sample_size = 310 # we'll drop the first 10 inferences (incase of cold starts)
+sample_size = 3 # we'll drop the first 10 inferences (incase of cold starts)
 X_rand, y_rand = randomise(sample_size, X_test, y_test)
 red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 
@@ -64,7 +64,7 @@ def main():
     # next, pca versions for tenseal!
 
     #test_model_accuracy("ts_pca_svm") # works. Accuracy for log quite a bit lower though?
-    run_model_testing("ts_pca_svm")
+    #run_model_testing("ts_pca_svm")
 
     """
     pcalog acc = ~90% for sample_size=800 | inference = ~3.85ms for sample_size=300
@@ -75,6 +75,23 @@ def main():
     Annnnndddd.... only 3x slower than plaintext! (1ms inference, from what I wrote in my gregynog slides, so i may be wrong..) 
     """
 
+    # apr 11th: testing pal models
+    #run_model_testing("pal_pca_svm")
+
+    # accuracy? Test pca versions first
+    test_model_accuracy("pal_svm")
+
+    """
+    paillier models are a bit dissapointing. 2048 bit key encryption (anything lower is insecure)
+    
+    sample size 30: 
+    pal pca log/svm ~48ms inference (28ms (~2x) slower than zama, 44ms (~12x) slower than tenseal)
+   
+    sample_size 30 for pca below. Encrypting with pal takes too long (hence why we haven't tested non-pca yet) 
+    pal pca log ~91% accurate
+    pal pca svm ~95% accurate.
+    Seeing same accuracies as tenseal pca's
+    """
 
 ### ---------------- ###
 
@@ -86,6 +103,8 @@ def run_model_testing(model_name):
         inference_times = zama_benchmark_model(model_name[5:]) # zama_log -> log
     elif model_name[0] == 't':
         inference_times = ts_benchmark_model(model_name[3:])
+    elif model_name[0] == 'p':
+        inference_times = pal_benchmark_model(model_name[4:])
     else:
         raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
 
@@ -106,6 +125,8 @@ def test_model_accuracy(model_name):
         accuracy = zama_test_accuracy(model_name[5:]) # zama_log -> log
     elif model_name[0] == 't':
         accuracy = ts_test_accuracy(model_name[3:])
+    elif model_name[0] == 'p':
+        accuracy = pal_test_accuracy(model_name[4:])
     else:
         raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
 
@@ -116,9 +137,9 @@ def ts_test_accuracy(model_name):
     model = util.loadModelPickle(f"ts_plain_models/{model_name}")
     ctx_eval = client.setup_ts_params() # remember to change depending on what the model is (when we test log)
 
-    isLog = True
+    is_log = True
     if model_name == "svm" or model_name == "pca_svm": # potentially make more robust. What if it's neither?
-        isLog = False
+        is_log = False
 
     x, y = (red_X_rand, red_y_rand) if _is_pca_model(model_name) else (X_rand, y_rand)
 
@@ -131,11 +152,38 @@ def ts_test_accuracy(model_name):
 
     print("Testing accuracy...")
 
+    accuracy = _ts_accuracy_test_loop(model, enc_x, y, is_log)
+
+    print(f"\nTENSEAL {model_name} HE ACCURACY = {accuracy}%")
+
+def pal_test_accuracy(model_name):
+    pal_model = util.loadModelPickle(f"pal_plain_models/{model_name}")
+    is_log = True
+    if model_name == "svm" or model_name == "pca_svm": # potentially make more robust. What if it's neither?
+        is_log = False
+
+    x, y = (red_X_rand, red_y_rand) if _is_pca_model(model_name) else (X_rand, y_rand)
+
+    public_key, private_key = client.pal_gen_keys()
+
+    print("Encrypting test set...")
+    s = time.perf_counter()
+    enc_x = client.pal_enc_dataset(public_key, x)
+    e = time.perf_counter()
+    print(f"Test set of size {sample_size} encrypted in {e - s} seconds.")
+
+    accuracy = _pal_accuracy_test_loop(pal_model, private_key, enc_x, y, is_log)
+    print(f"\nPAILLIER {model_name} HE ACCURACY = {accuracy}%")
+
+
+def _ts_accuracy_test_loop(model, enc_x, y, is_log):
+    correct_counter = 0
+
     for i in range(sample_size):
         enc_prelim_y = model.enc_prelim_predict(enc_x[i])
         prelim_y = enc_prelim_y.decrypt()
         pred_y = None
-        if isLog:
+        if is_log:
             pred_y = client.ts_client_finish_prediction_log(prelim_y)
             if client.ts_is_correct_prediction_log(y[i], pred_y):
                 correct_counter += 1
@@ -144,8 +192,25 @@ def ts_test_accuracy(model_name):
             if client.ts_is_correct_prediction_svm(y[i], pred_y):
                 correct_counter += 1
 
-    print(f"\nTENSEAL {model_name} HE ACCURACY = {correct_counter / total}%")
+    return correct_counter / sample_size
 
+def _pal_accuracy_test_loop(model, private_key, enc_x, y, is_log):
+    correct_counter = 0
+
+    for i in range(sample_size):
+        enc_prelim_y = [model.enc_prelim_predict(enc_x[i])] # it's expecting y to be in a list (ts does this automatically. Pal doesn't)
+        prelim_y = client.pal_decrypt_prelim(private_key, enc_prelim_y)
+        pred_y = None
+        if is_log:
+            pred_y = client.ts_client_finish_prediction_log(prelim_y)
+            if client.ts_is_correct_prediction_log(y[i], pred_y):
+                correct_counter += 1
+        else:
+            pred_y = client.ts_client_finish_prediction_svm(prelim_y)
+            if client.ts_is_correct_prediction_svm(y[i], pred_y):
+                correct_counter += 1
+
+    return correct_counter / sample_size
 
 # call incase the need to debug
 def ts_test_plain_accuracy(model_name):
@@ -211,14 +276,29 @@ def zama_benchmark_model(model_name) -> list:
 
 # remove svm name after once we have log set up too (just to remind us we're solely testing svm)
 def ts_benchmark_model(model_name):
-    model = util.loadModelPickle(f"ts_plain_models/{model_name}")
+    ts_model = util.loadModelPickle(f"ts_plain_models/{model_name}")
 
     x, ctx = (red_X_rand, client.setup_ts_params_pca()) if _is_pca_model(model_name) else (X_rand, client.setup_ts_params())
     enc_x = client.ts_encrypt_x(x, ctx)
 
-    inference_times = _ts_inference_test_loop(model, enc_x)
+    inference_times = _ts_or_pal_inference_test_loop(ts_model, enc_x)
 
     return inference_times
+
+def pal_benchmark_model(model_name):
+    pal_model = util.loadModelPickle(f"pal_plain_models/{model_name}")
+    x = red_X_rand if _is_pca_model(model_name) else X_rand
+
+    public_key, private_key = client.pal_gen_keys()
+    s = time.perf_counter()
+    enc_x = client.pal_enc_dataset(public_key, x)
+    e = time.perf_counter()
+    print(f"Pal encrypting dataset of {sample_size} took {e - s} seconds.")
+
+    inference_times = _ts_or_pal_inference_test_loop(pal_model, enc_x)
+
+    return inference_times
+
 
 def benchmarkModelPlain(model_name):
     inferenceTimes = []
@@ -284,7 +364,7 @@ def _zama_inference_test_loop(model, model_name, is_pca_model):
 
     return inference_times[10:]
 
-def _ts_inference_test_loop(model, enc_x):
+def _ts_or_pal_inference_test_loop(model, enc_x):
     inference_times = []
     for i in range(sample_size):
         start = time.perf_counter()
