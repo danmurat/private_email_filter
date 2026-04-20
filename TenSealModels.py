@@ -14,19 +14,19 @@ class TenSealModels:
     def __init__(self):
         # from tutorial. This holds all the encryption keys + operations we can do
         # we can test CKKS scheme too!
-        self.context = ts.context(ts.SCHEME_TYPE.BFV, poly_modulus_degree=4096, plain_modulus=1032193)
+        #self.context = ts.context(ts.SCHEME_TYPE.BFV, poly_modulus_degree=4096, plain_modulus=1032193)
         self.c = 200.0 # most accurate soft-margin param found so far for SVM
 
     def trainLog(self, X_train, y_train, epochs):
         model = LogisticReg(X_train.shape[1])
         optim = torch.optim.SGD(model.parameters(), lr=1) # gradient descent 
-        criterion = torch.nn.BCELoss() # Binary Cross Entropy Loss
+        l = torch.nn.BCELoss() # Binary Cross Entropy Loss
 
         # typical "minimise loss", with pytorch handling most of the details..
         for e in range(epochs + 1):
             optim.zero_grad()
             out = model(X_train)
-            loss = criterion(out, y_train)
+            loss = l(out, y_train)
             loss.backward()
             optim.step()
             

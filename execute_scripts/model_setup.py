@@ -33,14 +33,21 @@ def main():
 
     #pal_save() # working as of 4:13pm 11th apr
 
+    # 20th apr (TESTING SVD TOO)
+    #preprocess_and_save() # done. svd should be saved correctly
+    #zama_plain_test_svd()
+    # leaving svd. Likely not compatible with how we've implemented Bag of worms.
+
     print("\n\nModel setup done.\n")
 
 
 model_data = util.loadModelPickle(util.model_data_path())
 reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
 X_train, y_train, X_test, y_test = model_data.get_all_data()
-red_X_train, red_X_test = reduced_model_data.get_all_data()
-t_X_train, t_y_train, t_X_test, t_y_test, t_red_X_train, t_red_X_test = util.convertToTorchTensors(X_train, y_train, X_test, y_test, red_X_train, red_X_test)
+pca_red_X_train, pca_red_X_test = reduced_model_data.get_all_pca_data()
+svd_red_X_train, svd_red_X_test = reduced_model_data.get_all_svd_data()
+t_X_train, t_y_train, t_X_test, t_y_test, t_pca_red_X_train, t_pca_red_X_test, t_svd_red_X_train, t_svd_red_X_test = util.convertToTorchTensors(X_train, y_train, X_test, y_test, pca_red_X_train, pca_red_X_test, svd_red_X_train, svd_red_X_test)
+
 
 # to quickly load all data later, instead of repeating the pre-process step which takes 15 seconds each time
 def preprocess_and_save():
@@ -55,8 +62,10 @@ def preprocess_and_save():
     y_test = y_test.to_numpy(copy=True)
     model_data = ModelData(X_train, y_train, X_test, y_test)
 
-    red_X_train, red_X_test = util.pca_data(X_train, X_test)
-    reduced_model_data = ReducedModelData(red_X_train, red_X_test)
+    pca_red_X_train, pca_red_X_test = util.pca_data(X_train, X_test, 50)
+    svd_red_X_train, svd_red_X_test = util.svd_data(X_train, X_test, 100)
+
+    reduced_model_data = ReducedModelData(pca_red_X_train, pca_red_X_test, svd_red_X_train, svd_red_X_test)
 
     util.saveModelPickle(model_data, util.model_data_path())
     util.saveModelPickle(reduced_model_data, util.reduced_model_data_path())
@@ -112,20 +121,39 @@ def zamaPlainTrainAndSave():
     print("plain zama logistic regression saved!\n")
 
 
+def zama_plain_test_svd():
+    z = ZamaModels()
+
+    print("training svm model...")
+    svm = z.trainSVM(svd_red_X_train, y_train)
+
+    print("training complete!\n")
+
+    print("training logistic regresssion model...")
+    log = z.trainLogistic(svd_red_X_train, y_train)
+    print("training complete!\n")
+
+    # quick accuracy test to make sure we didn't f up
+    print("zama plain svm accuracy: ")
+    z.testPlainAccuracy(svm, svd_red_X_test, y_test)
+    print("zama plain logistic accuracy: ")
+    z.testPlainAccuracy(log, svd_red_X_test, y_test)
+
+
 def zamaTrainAndSaveAndTestWithPca():
     z = ZamaModels()
 
     print("training pca'd svm model...")
-    svm = z.pcaTrainSvm(red_X_train, y_train)
+    svm = z.pcaTrainSvm(pca_red_X_train, y_train)
     util.saveModelPickle(svm, "pca_svm") # save plaintext version to quickly test later
-    z.pcaCompileModel(svm, red_X_train)
+    z.pcaCompileModel(svm, pca_red_X_train)
 
     print("training complete!\n")
 
     print("training pca'd logistic regresssion model...")
-    log = z.pcaTrainLogistic(red_X_train, y_train)
+    log = z.pcaTrainLogistic(pca_red_X_train, y_train)
     util.saveModelPickle(log, "pca_log")
-    z.pcaCompileModel(log, red_X_train)
+    z.pcaCompileModel(log, pca_red_X_train)
     print("training complete!\n")
 
     print("saving model weights...")
@@ -157,7 +185,7 @@ def pcaLoadPlainZamaAndTest(name):
     print(f"{name} model loaded!\n")
 
     print("testing plaintext accuracy...")
-    z.pcaTestPlainAccuracy(model, red_X_test, y_test)
+    z.pcaTestPlainAccuracy(model, pca_red_X_test, y_test)
 
 
 # now tenseal compat models

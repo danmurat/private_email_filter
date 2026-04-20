@@ -1,7 +1,6 @@
 from concrete.ml.sklearn.svm import LinearSVC as ConcreteLinearSVC
 from concrete.ml.sklearn import LogisticRegression as ConcreteLogisticRegression
 from concrete.ml.deployment import FHEModelDev, FHEModelClient, FHEModelServer
-from sklearn.decomposition import PCA
 from sklearn.svm import LinearSVC as SklearnLinearSVC
 from sklearn.metrics import accuracy_score, f1_score, make_scorer
 
