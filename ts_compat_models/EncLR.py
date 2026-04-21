@@ -20,7 +20,7 @@ class EncLR:
         return enc_x_i.dot(self.w) - self.b
 
     # for plaintext
-    def predict(self, x_i):
+    def plaintext_predict(self, x_i):
         prelim_y = np.dot(x_i, self.w) - self.b
         print(f"plain log prelim_y = {prelim_y}")
         y = client.ts_client_finish_prediction_log(prelim_y)

@@ -30,9 +30,10 @@ reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
 
 X_test = model_data.get_X_test() # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, BY ACCIDENT!!! (yes i spent the past hr debugging this)
 y_test = model_data.get_y_test()
+X_test = X_test.toarray() # remember these are sparse when loaded
 red_X_test = reduced_model_data.get_red_X_test()
 
-sample_size = 3 # we'll drop the first 10 inferences (incase of cold starts)
+sample_size =100 # we'll drop the first 10 inferences (incase of cold starts)
 X_rand, y_rand = randomise(sample_size, X_test, y_test)
 red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 
@@ -40,62 +41,27 @@ red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 ### ---------------- ###
 
 def main():
-    #run_model_testing("zama_svm") # 9th feb benchmarking Plain! not HE!
-    #run_model_testing("zama_log") # working with refactors
-    #run_model_testing("zama_pca_log") # but does it work pca? It does :)
-    #run_model_testing("zama_pca_svm")
+    #test_model_latency("zama_svm") # 9th feb benchmarking Plain! not HE!
+    #test_model_latency("zama_log") # working with refactors
+    #test_model_latency("zama_pca_log") # but does it work pca? It does :)
+    #test_model_latency("zama_pca_svm")
 
-    #test_model_accuracy("ts_svm") # 9th apr testing
-
-    # TODO: 10th apr
-    # - handle inference testing for tenseal svm [done]
-    # - get encrypted inference implemented for tenseal log [done]
-    # - make inference testing work for both tenseal svm/log [done]
-
-    #run_model_testing("ts_svm") # 10th apr testing 70ms! vs 340ms for zama..
-
-    #test_model_accuracy("ts_svm") # HE accuracy 95%+ for log and svm
-
-    #run_model_testing("ts_log") # inference also ~69/70ms (key size: 2^14)
-                                # inference at 24ms if key size = 2^13 rather than
-                                # but input doesn't fit into 2^13, so should theoretically have some accuracy drop (it's like 1-0.5% drop when testing)
-
-
-    # next, pca versions for tenseal!
-
-    #test_model_accuracy("ts_pca_svm") # works. Accuracy for log quite a bit lower though?
-    #run_model_testing("ts_pca_svm")
-
+    # 21st apr:
+    # want to test if enc accuracy = plain accuracy. It should be, since HE guarantees the same results.
+    # Since we have to "pilot" our accuracy tests too (too long to test whole test set), we can just see
+    # if the plaintext accuracy on the same random set is the same
+    # test_model_accuracy("ts_svm", True)
+    # print("\nTESTING PLAIN\n")
+    # test_model_accuracy("ts_svm", False)
     """
-    pcalog acc = ~90% for sample_size=800 | inference = ~3.85ms for sample_size=300
-    pcasvm acc = ~96% for sample_size=800 | inference = ~3.85ms for sample_size=300
-    
-    vs inferences of ~70ms for the full sized ts models. ~20x speed up on something that was already quick!
-    Means these are 5x quicker than zamas pca'd models, and 100x quicker than the full sized!
-    Annnnndddd.... only 3x slower than plaintext! (1ms inference, from what I wrote in my gregynog slides, so i may be wrong..) 
-    """
-
-    # apr 11th: testing pal models
-    #run_model_testing("pal_pca_svm")
-
-    # accuracy? Test pca versions first
-    test_model_accuracy("pal_svm")
-
-    """
-    paillier models are a bit dissapointing. 2048 bit key encryption (anything lower is insecure)
-    
-    sample size 30: 
-    pal pca log/svm ~48ms inference (28ms (~2x) slower than zama, 44ms (~12x) slower than tenseal)
-   
-    sample_size 30 for pca below. Encrypting with pal takes too long (hence why we haven't tested non-pca yet) 
-    pal pca log ~91% accurate
-    pal pca svm ~95% accurate.
-    Seeing same accuracies as tenseal pca's
+    Re-running MULTIPLE times continuously yields the same correct counters for both. Safe to say that the encrypted models
+    have the same accuracy as plain, so we'll use the plaintext accuracies on the whole test set when talking about the
+    model as a whole. 
     """
 
 ### ---------------- ###
 
-def run_model_testing(model_name):
+def test_model_latency(model_name):
     print(f"Testing {model_name}")
 
     inference_times = None
@@ -119,14 +85,19 @@ def run_model_testing(model_name):
     print(f"Inference mean: {mean_low}ms-{mean_high}ms, 95% CI")
 
 
-def test_model_accuracy(model_name):
-    accuracy = None
-    if model_name[0] == 'z':
-        accuracy = zama_test_accuracy(model_name[5:]) # zama_log -> log
-    elif model_name[0] == 't':
-        accuracy = ts_test_accuracy(model_name[3:])
-    elif model_name[0] == 'p':
-        accuracy = pal_test_accuracy(model_name[4:])
+def test_model_accuracy(model_name: str, enc: bool):
+    if model_name[0] == 'z' and enc:
+        zama_test_accuracy(model_name[5:]) # zama_log -> log
+    elif model_name[0] == 'z' and not enc:
+        zama_test_plain_accuracy(model_name[5:]) # zama_log -> log
+    elif model_name[0] == 't' and enc:
+        ts_test_accuracy(model_name[3:])
+    elif model_name[0] == 't' and not enc:
+        ts_test_plain_accuracy(model_name[3:])
+    elif model_name[0] == 'p' and enc:
+        pal_test_accuracy(model_name[4:])
+    elif model_name[0] == 'p' and not enc:
+        pal_test_plain_accuracy(model_name[4:])
     else:
         raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
 
@@ -152,9 +123,9 @@ def ts_test_accuracy(model_name):
 
     print("Testing accuracy...")
 
-    accuracy = _ts_accuracy_test_loop(model, enc_x, y, is_log)
+    correct_count, accuracy = _ts_accuracy_test_loop(model, enc_x, y, is_log)
 
-    print(f"\nTENSEAL {model_name} HE ACCURACY = {accuracy}%")
+    print(f"\nTENSEAL {model_name} | CORRECT={correct_count} | HE ACCURACY={accuracy}%")
 
 def pal_test_accuracy(model_name):
     pal_model = util.loadModelPickle(f"pal_plain_models/{model_name}")
@@ -176,7 +147,7 @@ def pal_test_accuracy(model_name):
     print(f"\nPAILLIER {model_name} HE ACCURACY = {accuracy}%")
 
 
-def _ts_accuracy_test_loop(model, enc_x, y, is_log):
+def _ts_accuracy_test_loop(model, enc_x, y, is_log) -> tuple:
     correct_counter = 0
 
     for i in range(sample_size):
@@ -192,7 +163,7 @@ def _ts_accuracy_test_loop(model, enc_x, y, is_log):
             if client.ts_is_correct_prediction_svm(y[i], pred_y):
                 correct_counter += 1
 
-    return correct_counter / sample_size
+    return correct_counter, (correct_counter / sample_size)
 
 def _pal_accuracy_test_loop(model, private_key, enc_x, y, is_log):
     correct_counter = 0
@@ -226,12 +197,12 @@ def ts_test_plain_accuracy(model_name):
     print("Testing accuracy...")
 
     for i in range(sample_size):
-        pred_y = model.predict(X_rand[i])
-        print(f"Actual y = {y_rand[i]} | predicted y = {pred_y}")
+        pred_y = model.plaintext_predict(X_rand[i])
+        #print(f"Actual y = {y_rand[i]} | predicted y = {pred_y}")
         if pred_y == y_rand[i]:
             correct_counter += 1
 
-    print(f"\nTENSEAL {model_name} HE ACCURACY = {correct_counter / total}%")
+    print(f"\nTENSEAL {model_name} | CORRECT={correct_counter} | HE ACCURACY={correct_counter / total}%")
 
 # prints stuff like mean, sd, variance, etc...
 def getStats(data) -> tuple:

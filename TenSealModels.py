@@ -15,7 +15,7 @@ class TenSealModels:
         # from tutorial. This holds all the encryption keys + operations we can do
         # we can test CKKS scheme too!
         #self.context = ts.context(ts.SCHEME_TYPE.BFV, poly_modulus_degree=4096, plain_modulus=1032193)
-        self.c = 200.0 # most accurate soft-margin param found so far for SVM
+        self.c = 2200.0 # most accurate penalty term found so far for SVM
 
     def trainLog(self, X_train, y_train, epochs):
         model = LogisticReg(X_train.shape[1])

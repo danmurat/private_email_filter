@@ -30,18 +30,6 @@ class ZamaModels:
 
         return log
     
-    def pcaTrainSvm(self, reduced_X_train, y_train):
-        svm = ConcreteLinearSVC(max_iter=400, n_bits=8)
-        svm.fit(reduced_X_train, y_train)
-
-        return svm
-    
-    def pcaTrainLogistic(self, reduced_X_train, y_train) -> ConcreteLogisticRegression:
-        log = ConcreteLogisticRegression(n_bits=8)
-        log.fit(reduced_X_train, y_train)
-
-        return log
- 
 
     # required for fhe
     # this might not work if arguments are passed as copies?

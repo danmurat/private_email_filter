@@ -81,7 +81,7 @@ class LinearSVM:
                 correct_counter += 1
 
         accuracy = correct_counter / length
-        print(f"SVM Accuracy = {accuracy:.2f}")
+        print(f"SVM Accuracy = {accuracy}")
         #print(y_pred_list)
 
 

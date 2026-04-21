@@ -20,37 +20,30 @@ def loadModelPickle(name):
     with open(f"pickle_objects/{name}.pkl", "rb") as file:
         return pickle.load(file)
 
-def convertToTorchTensors(X_train, y_train, X_test, y_test, pca_red_X_train, pca_red_X_test, svd_red_X_train, svd_red_X_test) -> tuple:
+def convertToTorchTensors(X_train, y_train, X_test, y_test, red_X_train, red_X_test) -> tuple:
     t_X_train = torch.tensor(X_train).float()
     t_y_train = torch.tensor(y_train).float().unsqueeze(1) # adds extra dimension [n, 1] so that it corresponds with X when training
     t_X_test = torch.tensor(X_test).float()
     t_y_test = torch.tensor(y_test).float().unsqueeze(1)
-    t_pca_red_X_train = torch.tensor(pca_red_X_train).float()
-    t_pca_red_X_test = torch.tensor(pca_red_X_test).float()
-    t_svd_red_X_train = torch.tensor(svd_red_X_train).float()
-    t_svd_red_X_test = torch.tensor(svd_red_X_test).float()
+    t_red_X_train = torch.tensor(red_X_train).float()
+    t_red_X_test = torch.tensor(red_X_test).float()
 
-    return t_X_train, t_y_train, t_X_test, t_y_test, t_pca_red_X_train, t_pca_red_X_test, t_svd_red_X_train, t_svd_red_X_test
+    return t_X_train, t_y_train, t_X_test, t_y_test, t_red_X_train, t_red_X_test
 
 # pca was saved with n_components=200
 def pca_data(X_train, X_test, n_comp) -> tuple:
     pca = PCA(n_components=n_comp)
-    # fit FOR BOTH! Otherwise data will leak to test set
     red_X_train = pca.fit_transform(X_train)
-    red_X_test = pca.fit_transform(X_test)
+    red_X_test = pca.transform(X_test) # transfrom based off learnt features in train set (we shouldn't learn from test! We can't 'look' into the future)
 
     return red_X_train, red_X_test
 
 def svd_data(X_train, X_test, n) -> tuple:
-    scaler = StandardScaler()
     svd = TruncatedSVD(n_components=n)
     red_X_train = svd.fit_transform(X_train)
-    red_X_test = svd.fit_transform(X_test)
+    red_X_test = svd.transform(X_test)
 
-    red_X_train_scaled = scaler.fit_transform(red_X_train)
-    red_X_test_scaled= scaler.fit_transform(red_X_test)
-
-    return red_X_train_scaled, red_X_test_scaled
+    return red_X_train, red_X_test
 
 
 # incase we ever need to run again/change params

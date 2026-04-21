@@ -2,13 +2,16 @@ import util
 import numpy as np
 import matplotlib.pyplot as plt
 from ZamaModels import ZamaModels
+from data_functionality.PreProcess import PreProcess
 from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 model_data = util.loadModelPickle(util.model_data_path())
 red_model_data = util.loadModelPickle(util.reduced_model_data_path())
 X_train, y_train, X_test, y_test = model_data.get_all_data()
-red_X_train, red_X_test = red_model_data.get_all_pca_data()
+red_X_train, red_X_test = red_model_data.get_all_data()
 text_data = np.vstack((X_train, X_test))
 
 def main():
@@ -18,18 +21,37 @@ def main():
     #
     # plot_one("PCA", n_components, pca_accum)
 
-    # component_blocks = [20, 50, 100, 200, 500]
-    # for c in component_blocks:
-    #     print("Training with block: ", c)
-    #     pca = PCA(n_components=c)
-    #     red_X_train = pca.fit_transform(X_train)
-    #     red_X_test = pca.fit_transform(X_test)
-    #     train_and_test_block(red_X_train, y_train, red_X_test, y_test)
-    #     print(f"Block: {c} complete.")
+    component_blocks = [50, 100, 150, 200, 300]
+    #pca_block_test_loop(component_blocks)
+
+    #checking if tf-idf gives us better results
+    p = PreProcess()
+    train_text, test_text = p.getTrainTestText()     # UNCOMMENT THIS WHEN SVD TESTED WITHOUT LEAKAGE!
+    tfidf_vec = TfidfVectorizer(
+        stop_words="english",
+        max_features=3020,
+        min_df=2,
+        max_df=0.8
+    )
+    tfidf_train = tfidf_vec.fit_transform(train_text)
+    tfidf_test = tfidf_vec.transform(test_text)
+
+    #print(f"ifidf shape = {tfidf_test.shape}")
+
+    # well.. tfidf turning out to be quite a bit better than my own lol
+    svd_block_test_loop(component_blocks, X_train, X_test)
+
+
+    # TESTING BoW vs tfidf
+    #pca_block_test_loop(component_blocks, X_train, X_test)
+    #pca_block_test_loop(component_blocks, tfidf_train, tfidf_test)
+    print(f"new bow shape = {X_train.shape}")
+
+
 
     # print(red_X_train.shape)
     # print(text_data.shape)
-    test_og_pca()
+    #test_og_pca()
 
 
 def plot_one(name, n, accum):
@@ -79,23 +101,40 @@ def svd_scree_test(n):
 
     return accum
 
-def train_and_test_block(X_train, y_train, X_test, y_test):
+def pca_block_test_loop(component_blocks, train, test):
+    for c in component_blocks:
+        print("Training with block: ", c)
+        pca = PCA(n_components=c)
+        red_X_train = pca.fit_transform(train)
+        red_X_test = pca.transform(test)
+        train_and_test_block(red_X_train, red_X_test)
+        print(f"Block: {c} complete.\n\n")
+
+def svd_block_test_loop(component_blocks, train, test):
+    for c in component_blocks:
+        print("\nTraining with block: ", c)
+        svd = TruncatedSVD(n_components=c, algorithm="arpack")
+        svd_red_X_train = svd.fit_transform(train)
+        svd_red_X_test = svd.transform(test)
+        train_and_test_block(svd_red_X_train, svd_red_X_test)
+
+def train_and_test_block(train, test):
     z = ZamaModels()
 
     print("training svm model...")
-    svm = z.trainSVM(X_train, y_train)
+    svm = z.trainSVM(train, y_train)
 
     print("training complete!\n")
 
     print("training logistic regresssion model...")
-    log = z.trainLogistic(X_train, y_train)
+    log = z.trainLogistic(train, y_train)
     print("training complete!\n")
 
     # quick accuracy test to make sure we didn't f up
-    print("zama plain svm accuracy: ")
-    z.testPlainAccuracy(svm, X_test, y_test)
     print("zama plain logistic accuracy: ")
-    z.testPlainAccuracy(log, X_test, y_test)
+    z.testPlainAccuracy(log, test, y_test)
+    print("zama plain svm accuracy: ")
+    z.testPlainAccuracy(svm, test, y_test)
 
 
 def test_og_pca():

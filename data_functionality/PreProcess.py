@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 import json
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 """
 Sets up our given dataset to be compatable with training classifier ML models
@@ -19,13 +20,24 @@ class PreProcess:
     # to be given to DataObj after preprocessing
     def getData(self):
         # if one is set up, they'll all be setup, so pointless checking
-        is_data_setup = self.v_train_text.any() #!= None and self.train_data.any() != None and self.v_test_text.any() != None and self.test_data.any() != None
+        is_data_setup = self.v_train_text is not None #!= None and self.train_data.any() != None and self.v_test_text.any() != None and self.test_data.any() != None
         
         if is_data_setup:
-            return (self.v_train_text, self.train_data["label"], self.v_test_text, self.test_data["label"])
+            return self.v_train_text, self.train_data["label"], self.v_test_text, self.test_data["label"]
         else:
             raise ValueError("Data missing (type None). Run preprocess() first or check data integrity.")
-   
+
+    def getTrainTestText(self):
+        train, test = self._loadDataset()
+
+        return train["text"], test["text"]
+
+    # yep pretty much 50/50 (vary slight variation)
+    def is_data_imbalanced(self):
+        train, test = self._loadDataset()
+
+        print("length of train data = ",len(train))
+        print("length of ham = ",len(train[train["label"] == 0]))
 
     def getTrainingData(self):
         return self.train_data
@@ -42,8 +54,30 @@ class PreProcess:
     def getWordCountsThresholdIndexed(self):
         return self.word_counts_threshold_indexed
 
+    def preprocess_tfidf(self):
+        train, test = self._loadDataset()
+        self.train_data = train
+        self.test_data = test
+        self.tfidf(train["text"], test["text"])
+
+    # after testing against our own BoW, this fares better. Including so we can save
+    # text data in this format for encrypted training and testing.
+    def tfidf(self, train_text, test_text):
+        tfidf_vec = TfidfVectorizer(
+            stop_words="english",
+            max_features=3020,
+            min_df=2,
+            max_df=0.8
+        )
+
+        tfidf_train = tfidf_vec.fit_transform(train_text)
+        tfidf_test = tfidf_vec.transform(test_text)
+
+        self.v_train_text = tfidf_train
+        self.v_test_text = tfidf_test
+
     # RUN THIS SO VARIABLES GET ASSIGNED!
-    def preprocess(self):
+    def preprocess_bow(self):
         print("loading datasets...")
 
         data = self._loadDataset()
@@ -54,7 +88,7 @@ class PreProcess:
         
         # TODO: we should probably be accessing ALL text, not just train
         word_counts = self._getWordCounts(self.train_data["text"])
-        word_counts_threshold = self._wordCountsThreshold(word_counts, 100)
+        word_counts_threshold = self._wordCountsThreshold(word_counts, 200)
         self.word_counts_threshold_indexed = self._wordCountsThresholdIndexed(word_counts_threshold)
         # into json so we can access it later for preprocessing single emails (in demo)
         self._saveIndexedWords100(self.word_counts_threshold_indexed)
@@ -179,7 +213,7 @@ class PreProcess:
         train = pd.read_json("../spam_dataset/train.jsonl", lines=True)
         test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
 
-        return (train, test)
+        return train, test
 
 
     
