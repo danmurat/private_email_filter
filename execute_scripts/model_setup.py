@@ -42,10 +42,10 @@ def main():
     #preprocess_and_save()
     #zamaTrainAndSave()
     #zamaPlainTrainAndSave()
-    #tsTrainAndSave()
+    tsTrainAndSave()
     #pal_save()
-    p = PreProcess()
-    p.is_data_imbalanced()
+    # p = PreProcess()
+    # p.is_data_imbalanced() pretty much 50/50
 
     # retraining and saving all models with tfidf
     print("\n\nModel setup done.\n")
@@ -204,23 +204,23 @@ def tsTrainAndSave():
     ts = TenSealModels()
 
     # commenting out log to deal with low svm accuracy on tfidf
-    # print("Training tenseal logistic regression...")
-    # ts_pre_log = ts.trainLog(t_X_train, t_y_train, 3000) # 97.55% acc
-    # ts_log = EncLR(ts_pre_log) # here is where we save the weights and allow for encrypted inference
-    # print("training finished.")
-    #
-    # ts.logAccuracy(ts_pre_log, t_X_test, t_y_test)
-
-    print("Training tenseal svm...")
-    ts_pre_svm = ts.trainSVM(t_X_train, t_y_train, 2300) # 97%
-    ts_svm = EncSVM(ts_pre_svm)
+    print("Training tenseal logistic regression...")
+    ts_pre_log = ts.trainLog(t_X_train, t_y_train, 3000) # 97.55% acc
+    ts_log = EncLR(ts_pre_log) # here is where we save the weights and allow for encrypted inference
     print("training finished.")
 
-    ts.svmAccuracy(ts_pre_svm, t_X_test, t_y_test)
+    ts.torch_log_predictions(ts_pre_log, t_X_test, t_y_test) # prints accuracy (throw y_pred away)
+
+    # print("Training tenseal svm...")
+    # ts_pre_svm = ts.trainSVM(t_X_train, t_y_train, 2300) # 97%
+    # ts_svm = EncSVM(ts_pre_svm)
+    # print("training finished.")
+    #
+    # ts.svmAccuracy(ts_pre_svm, t_X_test, t_y_test)
 
     print("Saving models with pickle...")
-    # util.saveModelPickle(ts_log, "ts_plain_models/log")
-    util.saveModelPickle(ts_svm, "ts_plain_models/svm")
+    util.saveModelPickle(ts_log, "ts_plain_models/log")
+    #util.saveModelPickle(ts_svm, "ts_plain_models/svm")
     print("Tenseal models saved.")
 
 def ts_svd_train_and_save():

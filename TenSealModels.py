@@ -41,11 +41,16 @@ class TenSealModels:
     #
     #     return model
 
-    def logAccuracy(self, log_model, X_test, y_test):
+    def log_predictions(self, log_model, X_test):
         # i know log_model.blahblah(pass in the same object again...). Bear with
-        log_model.testAccuracy(log_model, X_test, y_test)
-    
-    
+        y_pred = log_model.testAccuracy(X_test)
+        return y_pred
+
+    # this is specifically for the pytorch lr class, not the encrypted lr that we save later
+    def torch_log_predictions(self, log_model, X_test, y_test):
+        y_pred = log_model.testAccuracy(X_test, y_test)
+        return y_pred
+
     # epochs=5000 best we've found with step_size=0.001
     def trainSVM(self, X_train, y_train, epochs=5000):
         model = LinearSVM(X_train.shape[1], self.c)
@@ -53,8 +58,9 @@ class TenSealModels:
 
         return model
 
-    def svmAccuracy(self, ts_svm_model, X_test, y_test):
-        ts_svm_model.testAcc(X_test, y_test)
+    def svm_predictions(self, ts_svm_model, X_test, y_test):
+        y_pred = ts_svm_model.testAcc(X_test, y_test)
+        return y_pred
 
 
 

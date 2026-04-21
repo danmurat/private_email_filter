@@ -83,6 +83,7 @@ class LinearSVM:
         accuracy = correct_counter / length
         print(f"SVM Accuracy = {accuracy}")
         #print(y_pred_list)
+        return y_pred_list
 
 
     # predict and enc_predict for actually guessing a given x value

@@ -12,41 +12,27 @@ model_data = util.loadModelPickle(util.model_data_path())
 red_model_data = util.loadModelPickle(util.reduced_model_data_path())
 X_train, y_train, X_test, y_test = model_data.get_all_data()
 red_X_train, red_X_test = red_model_data.get_all_data()
-text_data = np.vstack((X_train, X_test))
 
 def main():
-    # n_components = 200
-    # pca_accum = pca_scree_test(n_components)
-    # #svd_accum = svd_scree_test(n_components)
+    n_components = 1400
+    pca_accum = pca_scree_test(n_components)
+    svd_accum = svd_scree_test(n_components)
+
+    plot_both(n_components, pca_accum, svd_accum)
+
+    # component_blocks = [50, 100, 150, 200, 300]
+    # #pca_block_test_loop(component_blocks)
     #
-    # plot_one("PCA", n_components, pca_accum)
-
-    component_blocks = [50, 100, 150, 200, 300]
-    #pca_block_test_loop(component_blocks)
-
-    #checking if tf-idf gives us better results
-    p = PreProcess()
-    train_text, test_text = p.getTrainTestText()     # UNCOMMENT THIS WHEN SVD TESTED WITHOUT LEAKAGE!
-    tfidf_vec = TfidfVectorizer(
-        stop_words="english",
-        max_features=3020,
-        min_df=2,
-        max_df=0.8
-    )
-    tfidf_train = tfidf_vec.fit_transform(train_text)
-    tfidf_test = tfidf_vec.transform(test_text)
-
-    #print(f"ifidf shape = {tfidf_test.shape}")
-
-    # well.. tfidf turning out to be quite a bit better than my own lol
-    svd_block_test_loop(component_blocks, X_train, X_test)
-
-
-    # TESTING BoW vs tfidf
-    #pca_block_test_loop(component_blocks, X_train, X_test)
-    #pca_block_test_loop(component_blocks, tfidf_train, tfidf_test)
-    print(f"new bow shape = {X_train.shape}")
-
+    #
+    # # well.. tfidf turning out to be quite a bit better than my own lol
+    # svd_block_test_loop(component_blocks, X_train, X_test)
+    #
+    #
+    # # TESTING BoW vs tfidf
+    # #pca_block_test_loop(component_blocks, X_train, X_test)
+    # #pca_block_test_loop(component_blocks, tfidf_train, tfidf_test)
+    # print(f"new bow shape = {X_train.shape}")
+    #
 
 
     # print(red_X_train.shape)
@@ -71,10 +57,10 @@ def plot_both(n, pca_accum, svd_accum):
     # plt.step(range(1, len(accum) + 1), accum, where="mid")
     plt.plot(components, pca_accum, color="blue")
     plt.plot(components, svd_accum, color="green")
-    plt.title("Dataset Scree plot")
+    plt.title("PCA (blue) and SVD (green) Scree plot")
     plt.xlabel("Component")
-    plt.ylabel("Cumilative Variance explained")
-    plt.axhline(y=0.80, color="red", linestyle="--")
+    plt.ylabel("Cumulative Variance explained")
+    #plt.axhline(y=0.80, color="red", linestyle="--")
     #plt.savefig("screeplot_large.png")
     plt.show()
 
@@ -83,18 +69,18 @@ def pca_scree_test(n):
     # just testing 800 to see how the variance changes (perhaps we'd need more than 200!)
     pca = PCA(n_components=n)
 
-    red_data = pca.fit(text_data)
+    red_data = pca.fit(X_train)
 
     component_variances = pca.explained_variance_ratio_
     accum = np.cumsum(component_variances)
 
-    return component_variances
+    return accum
 
 def svd_scree_test(n):
     # just testing 800 to see how the variance changes (perhaps we'd need more than 200!)
     svd = TruncatedSVD(n_components=n)
 
-    red_data = svd.fit(text_data)
+    red_data = svd.fit(X_train)
 
     component_variances = svd.explained_variance_ratio_
     accum = np.cumsum(component_variances)

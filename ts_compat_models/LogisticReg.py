@@ -18,8 +18,10 @@ class LogisticReg(torch.nn.Module):
         correct = torch.abs(actual - pred) < 0.5
         return correct.float().mean()
 
-    def testAccuracy(self, model, X_test, y_test):
-        y_pred = model(X_test)
+    def testAccuracy(self, X_test, y_test):
+        y_pred = self(X_test)
         accuracy = self._accuracy(y_pred, y_test)
 
-        print(f"Logistic reg acc = {accuracy}") 
+        print(f"Logistic reg acc = {accuracy}")
+
+        return y_pred

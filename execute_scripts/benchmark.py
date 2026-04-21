@@ -33,7 +33,7 @@ y_test = model_data.get_y_test()
 X_test = X_test.toarray() # remember these are sparse when loaded
 red_X_test = reduced_model_data.get_red_X_test()
 
-sample_size =100 # we'll drop the first 10 inferences (incase of cold starts)
+sample_size =110 # we'll drop the first 10 inferences (incase of cold starts)
 X_rand, y_rand = randomise(sample_size, X_test, y_test)
 red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
 
@@ -85,6 +85,7 @@ def test_model_latency(model_name):
     print(f"Inference mean: {mean_low}ms-{mean_high}ms, 95% CI")
 
 
+# just use to make sure encrypted predictions are equivilant to plaintext predictions (they are)
 def test_model_accuracy(model_name: str, enc: bool):
     if model_name[0] == 'z' and enc:
         zama_test_accuracy(model_name[5:]) # zama_log -> log
@@ -329,7 +330,7 @@ def _zama_inference_test_loop(model, model_name, is_pca_model):
         if is_pca_model:
             enc_x = cli.quantize_encrypt_serialize(red_X_rand[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
         else:
-            enc_x = cli.quantize_encrypt_serialize(red_X_rand[i:i+1])
+            enc_x = cli.quantize_encrypt_serialize(X_rand[i:i+1])
         inference_times.append(zama_inference_time(model, enc_x, eval_keys))
         print(f"Inference {i} complete.")
 

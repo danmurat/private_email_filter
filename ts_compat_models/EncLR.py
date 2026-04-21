@@ -12,6 +12,7 @@ to perform encrypted inferences.
 """
 class EncLR:
     def __init__(self, trained_lr):
+        self.trained_lr = trained_lr # so we can call testAccuracy
         self.w = trained_lr.log_reg.weight.data.tolist()[0]
         self.b = trained_lr.log_reg.bias.data.tolist()
 
@@ -32,3 +33,9 @@ class EncLR:
             y = 1
 
         return y
+
+
+    def testAccuracy(self, X_test):
+        y_pred = self.trained_lr(X_test)
+
+        return y_pred
