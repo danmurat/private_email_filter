@@ -84,6 +84,9 @@ def ts_encrypt_x_i(x_i, ctx_eval):
     enc_x_i = ts.ckks_vector(ctx_eval, x_i)
     return enc_x_i
 
+def ts_decrypt(enc_result):
+    return enc_result.decrypt()
+
 
 # -- Paillier stuff --
 
@@ -94,6 +97,8 @@ Paillier apparently does not stop us from creating insecure keys... and 1024 and
 
 Using key lengths of 256, 512, 1024 is fine for testing, but testing only. 2048 has to be the option we use
 in our benchmarks.
+
+Note, it takes about 20seconds to encrypt a single email (non svd reduced) with 2048
 """
 def pal_gen_keys() -> tuple:
     return paillier.generate_paillier_keypair(n_length=2048) # 256 lowest we can go without runtime errors. But is this even secure?
@@ -105,6 +110,7 @@ def pal_enc_dataset(public_key, x):
     enc_x = []
     for i in range(len(x)):
         enc_x.append(pal_enc_x_i(public_key, x[i]))
+        print(f"email {i} encrypted.")
 
     return enc_x
 

@@ -23,9 +23,9 @@ class EncLR:
     # for plaintext
     def plaintext_predict(self, x_i):
         prelim_y = np.dot(x_i, self.w) - self.b
-        print(f"plain log prelim_y = {prelim_y}")
+        #print(f"plain log prelim_y = {prelim_y}")
         y = client.ts_client_finish_prediction_log(prelim_y)
-        print(f"post sigmoid y = {y}")
+        #print(f"post sigmoid y = {y}")
 
         if y < 0.5:
             y = 0

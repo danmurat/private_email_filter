@@ -36,7 +36,7 @@ class ZamaModels:
     def compileModel(self, model, X_train):
         circuit = model.compile(X_train)
     
-    def pcaCompileModel(self, model, reduced_X_train):
+    def svdCompileModel(self, model, reduced_X_train):
         circuit = model.compile(reduced_X_train)
 
     def saveModel(self, model, name):

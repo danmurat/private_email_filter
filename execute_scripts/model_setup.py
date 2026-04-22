@@ -42,10 +42,16 @@ def main():
     #preprocess_and_save()
     #zamaTrainAndSave()
     #zamaPlainTrainAndSave()
-    tsTrainAndSave()
+    #tsTrainAndSave()
     #pal_save()
     # p = PreProcess()
     # p.is_data_imbalanced() pretty much 50/50
+
+    # 22nd apr (need to set up models on reduced data for testing)
+    #preprocess_and_save() # run again to make sure we're using svd with 200 components
+    #zamaTrainAndSaveAndTestWithSvd()
+    #ts_svd_train_and_save()
+    #pal_save()
 
     # retraining and saving all models with tfidf
     print("\n\nModel setup done.\n")
@@ -73,7 +79,7 @@ def preprocess_and_save():
     y_test = y_test.to_numpy(copy=True)
     model_data = ModelData(X_train, y_train, X_test, y_test)
 
-    red_X_train, red_X_test = util.svd_data(X_train, X_test, 200)
+    red_X_train, red_X_test = util.svd_data(X_train, X_test, 150)
 
     reduced_model_data = ReducedModelData(red_X_train, red_X_test)
 
@@ -155,15 +161,15 @@ def zamaTrainAndSaveAndTestWithSvd():
 
     print("training pca'd svm model...")
     svm = z.trainSVM(red_X_train, y_train)
-    util.saveModelPickle(svm, "svd_svm") # save plaintext version to quickly test later
-    z.pcaCompileModel(svm, red_X_train)
+    util.saveModelPickle(svm, "zama_plain_models/svd_svm") # save plaintext version to quickly test later
+    z.svdCompileModel(svm, red_X_train)
 
     print("training complete!\n")
 
     print("training pca'd logistic regresssion model...")
     log = z.trainLogistic(red_X_train, y_train)
-    util.saveModelPickle(log, "svd_log")
-    z.pcaCompileModel(log, red_X_train)
+    util.saveModelPickle(log, "zama_plain_models/svd_log")
+    z.svdCompileModel(log, red_X_train)
     print("training complete!\n")
 
     print("saving model weights...")
@@ -191,7 +197,7 @@ def svdLoadPlainZamaAndTest(name):
     z = ZamaModels()
 
     print("loading model...")
-    model = util.loadModelPickle(name)
+    model = util.loadModelPickle(f"zama_plain_models/{name}")
     print(f"{name} model loaded!\n")
 
     print("testing plaintext accuracy...")
@@ -230,14 +236,14 @@ def ts_svd_train_and_save():
     ts_svd_log = EncLR(ts_pre_svd_log) # here is where we save the weights and allow for encrypted inference
     print("training finished.")
 
-    ts.logAccuracy(ts_pre_svd_log, t_red_X_test, t_y_test)
+    ts.torch_log_predictions(ts_pre_svd_log, t_red_X_test, t_y_test)
 
     print("Training tenseal svm...")
-    ts_pre_svd_svm = ts.trainSVM(t_red_X_train, t_y_train, 5000) # 97%
+    ts_pre_svd_svm = ts.trainSVM(t_red_X_train, t_y_train, 2200) # 97%
     ts_svd_svm = EncSVM(ts_pre_svd_svm)
     print("training finished.")
 
-    ts.svmAccuracy(ts_pre_svd_svm, t_red_X_test, t_y_test)
+    ts.svm_predictions(ts_pre_svd_svm, t_red_X_test, t_y_test)
 
     print("Saving models with pickle...")
     util.saveModelPickle(ts_svd_log, "ts_plain_models/svd_log")
@@ -246,29 +252,30 @@ def ts_svd_train_and_save():
 
 # can just load ts_plain_models (already trained) into EncLinear. All we need is weights/bias
 def pal_save():
+    # SAVING JUST REDUCED DATA VERSIONS
     print("Loading ts compat models for paillier...")
-    ts_log = util.loadModelPickle("ts_plain_models/log")
-    #ts_svd_log = util.loadModelPickle("ts_plain_models/svd_log")
-    ts_svm = util.loadModelPickle("ts_plain_models/svm")
-    #ts_svd_svm = util.loadModelPickle("ts_plain_models/svd_svm")
+    #ts_log = util.loadModelPickle("ts_plain_models/log")
+    ts_svd_log = util.loadModelPickle("ts_plain_models/svd_log")
+    #ts_svm = util.loadModelPickle("ts_plain_models/svm")
+    ts_svd_svm = util.loadModelPickle("ts_plain_models/svd_svm")
     print("Loaded.")
 
     # confirm that w's are appropriate lengths
-    print(len(ts_log.w))
-    #print(len(ts_svd_log.w))
-    print(len(ts_svm.w))
-    #print(len(ts_svd_svm.w))
+    #print(len(ts_log.w))
+    print(len(ts_svd_log.w))
+    #print(len(ts_svm.w))
+    print(len(ts_svd_svm.w))
 
-    pal_log = EncLinear(ts_log)
-    #pal_pca_log = EncLinear(ts_svd_log)
-    pal_svm = EncLinear(ts_svm)
-    #pal_pca_svm = EncLinear(ts_svd_svm)
+    #pal_log = EncLinear(ts_log)
+    pal_svd_log = EncLinear(ts_svd_log)
+    #pal_svm = EncLinear(ts_svm)
+    pal_svd_svm = EncLinear(ts_svd_svm)
 
     print("Saving paillier models...")
-    util.saveModelPickle(pal_log, "pal_plain_models/log")
-    #util.saveModelPickle(pal_pca_log, "pal_plain_models/svd_log")
-    util.saveModelPickle(pal_svm, "pal_plain_models/svm")
-    #util.saveModelPickle(pal_pca_svm, "pal_plain_models/svd_svm")
+    #util.saveModelPickle(pal_log, "pal_plain_models/log")
+    util.saveModelPickle(pal_svd_log, "pal_plain_models/svd_log")
+   # util.saveModelPickle(pal_svm, "pal_plain_models/svm")
+    util.saveModelPickle(pal_svd_svm, "pal_plain_models/svd_svm")
     print("Models saved.")
 
 

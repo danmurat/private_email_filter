@@ -9,33 +9,13 @@ import math
 import scipy.stats as st
 import tenseal as ts
 import client
+z = ZamaModels() # just to use the loadModels() method
 
-# selects random index's for us to test (n=30 for a pilot test)
-def randomise(n, X, y) -> tuple:
-    # these might have to be changed to an np.array
-    randomised_X = np.zeros((n, len(X[0])))
-    randomised_y = np.zeros((n, 1))
-    for i in range(n):
-        rand = random.randint(0, 1999) # 2000 is out of bounds..
-        randomised_X[i] = X[rand]
-        randomised_y[i] = y[rand]
+X_test, red_X_test, y_test = util.load_test_data()
 
-    return randomised_X, randomised_y
-
-z = ZamaModels() # just to use the loadModels() method 
-
-# these as global variables, so we can call as needed (without having to pass params)
-model_data = util.loadModelPickle(util.model_data_path())
-reduced_model_data = util.loadModelPickle(util.reduced_model_data_path())
-
-X_test = model_data.get_X_test() # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, BY ACCIDENT!!! (yes i spent the past hr debugging this)
-y_test = model_data.get_y_test()
-X_test = X_test.toarray() # remember these are sparse when loaded
-red_X_test = reduced_model_data.get_red_X_test()
-
-sample_size =110 # we'll drop the first 10 inferences (incase of cold starts)
-X_rand, y_rand = randomise(sample_size, X_test, y_test)
-red_X_rand, red_y_rand = randomise(sample_size, red_X_test, y_test)
+sample_size =33 # we'll drop the first 3 inferences (incase of cold starts)
+X_rand, y_rand = util.randomise(sample_size, X_test, y_test)
+red_X_rand, red_y_rand = util.randomise(sample_size, red_X_test, y_test)
 
 
 ### ---------------- ###
@@ -59,20 +39,34 @@ def main():
     model as a whole. 
     """
 
+    test_model_latency("plain_ts_svm")
+
+    # 22nd apr
+    #test_enc_dec_times("pal_svd_log")
+
 ### ---------------- ###
 
 def test_model_latency(model_name):
     print(f"Testing {model_name}")
 
     inference_times = None
-    if model_name[0] == 'z':
-        inference_times = zama_benchmark_model(model_name[5:]) # zama_log -> log
-    elif model_name[0] == 't':
-        inference_times = ts_benchmark_model(model_name[3:])
-    elif model_name[0] == 'p':
-        inference_times = pal_benchmark_model(model_name[4:])
+    if model_name[:5] != "plain":
+        if model_name[0] == 'z':
+            inference_times = zama_benchmark_model(model_name[5:]) # zama_log -> log
+        elif model_name[0] == 't':
+            inference_times = ts_benchmark_model(model_name[3:])
+        elif model_name[0] == 'p':
+            inference_times = pal_benchmark_model(model_name[4:])
+        else:
+            raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
     else:
-        raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
+        # we test the plain inference for zama or ts
+        model_name = model_name[6:]
+        print(model_name)
+        if model_name[0] == 'z':
+            inference_times = zama_bench_plain_inference(model_name[5:])
+        elif model_name[0] == 't':
+            inference_times = ts_bench_plain_inference(model_name[3:])
 
     print(inference_times)
     
@@ -83,6 +77,41 @@ def test_model_latency(model_name):
     mean_low, mean_high = getMeanRange(mean, err)
 
     print(f"Inference mean: {mean_low}ms-{mean_high}ms, 95% CI")
+
+
+def test_enc_dec_times(model_name):
+    print(f"Testing {model_name}")
+
+    enc_times, dec_times = None, None
+    if model_name[0] == 'z':
+        enc_times, dec_times = zama_benchmark_enc_dec(model_name[5:]) # zama_log -> log
+    elif model_name[0] == 't':
+        enc_times, dec_times = ts_benchmark_enc_dec(model_name[3:])
+    elif model_name[0] == 'p':
+        enc_times, dec_times = pal_benchmark_enc_dec(model_name[4:])
+    else:
+        raise ValueError(f"model_name `{model_name}` should begin with `zama_` or `ts_`")
+
+    print(enc_times)
+    # ENCRYPTION STATS
+    enc_mean, enc_sd, enc_var, enc_n = getStats(enc_times)
+    printStats(enc_mean, enc_sd, enc_var, enc_n)
+    enc_err = calcErrorMargin(enc_sd, enc_n)
+
+    enc_mean_low, enc_mean_high = getMeanRange(enc_mean, enc_err)
+
+    print(f"{model_name} Encryption mean: {enc_mean_low}ms-{enc_mean_high}ms, 95% CI\n")
+
+    print(dec_times)
+    # DECRYPTION STATS
+    dec_mean, dec_sd, dec_var, dec_n = getStats(dec_times)
+    printStats(dec_mean, dec_sd, dec_var, dec_n)
+    dec_err = calcErrorMargin(dec_sd, dec_n)
+
+    dec_mean_low, dec_mean_high = getMeanRange(dec_mean, dec_err)
+
+    print(f"{model_name} Decryption mean: {dec_mean_low}ms-{dec_mean_high}ms, 95% CI")
+
 
 
 # just use to make sure encrypted predictions are equivilant to plaintext predictions (they are)
@@ -113,7 +142,7 @@ def ts_test_accuracy(model_name):
     if model_name == "svm" or model_name == "pca_svm": # potentially make more robust. What if it's neither?
         is_log = False
 
-    x, y = (red_X_rand, red_y_rand) if _is_pca_model(model_name) else (X_rand, y_rand)
+    x, y = (red_X_rand, red_y_rand) if _is_svd_model(model_name) else (X_rand, y_rand)
 
     print("Encrypting test set...")
     enc_x = client.ts_encrypt_x(x, ctx_eval)
@@ -134,7 +163,7 @@ def pal_test_accuracy(model_name):
     if model_name == "svm" or model_name == "pca_svm": # potentially make more robust. What if it's neither?
         is_log = False
 
-    x, y = (red_X_rand, red_y_rand) if _is_pca_model(model_name) else (X_rand, y_rand)
+    x, y = (red_X_rand, red_y_rand) if _is_svd_model(model_name) else (X_rand, y_rand)
 
     public_key, private_key = client.pal_gen_keys()
 
@@ -241,25 +270,93 @@ def zama_benchmark_model(model_name) -> list:
     model = z.loadModel(model_name)
     model.load()
 
-    inference_times = _zama_inference_test_loop(model, model_name, _is_pca_model(model_name))
+    inference_times = _zama_inference_test_loop(model, model_name, _is_svd_model(model_name))
 
     return inference_times
+
+# the model doesn't actually matter here, but needed to get key specs
+def zama_benchmark_enc_dec(model_name) -> tuple:
+    cli, eval_keys = z.client(model_name)
+    print("MODEL = ", model_name)
+    model = z.loadModel(model_name)
+
+    x = red_X_rand if _is_svd_model(model_name) else X_rand
+
+    enc_times = []
+    dec_times = []
+
+    for i in range(sample_size):
+        enc, dec = _zama_enc_dec_timers(model, x, cli, eval_keys, i)
+        enc_times.append(enc)
+        dec_times.append(dec)
+        print(f"enc/dec {i} complete.")
+
+    return enc_times[3:], dec_times[3:]
+
+def _zama_enc_dec_timers(model, x, cli, eval_keys, i) -> tuple:
+    s1 = time.perf_counter()
+    enc_x = cli.quantize_encrypt_serialize(x[i:i+1]) # i:i+1 preserves (1,n) 2d-ness
+    e1 = time.perf_counter()
+
+    enc_time = e1 - s1
+
+    # have the model output new result. Just decrypted straight after doesn't seem to be allowed? + prob more rigorous to do this way
+    enc_result = model.run(enc_x, eval_keys)
+
+    s2 = time.perf_counter()
+    plain_x = cli.deserialize_decrypt_dequantize(enc_result) # not sure if decrypting without the enc_x changing is too fast? (like no server prediction to change result)
+    e2 = time.perf_counter()
+
+    dec_time = e2 - s2
+
+    return enc_time, dec_time
 
 
 # remove svm name after once we have log set up too (just to remind us we're solely testing svm)
 def ts_benchmark_model(model_name):
     ts_model = util.loadModelPickle(f"ts_plain_models/{model_name}")
 
-    x, ctx = (red_X_rand, client.setup_ts_params_pca()) if _is_pca_model(model_name) else (X_rand, client.setup_ts_params())
+    x, ctx = (red_X_rand, client.setup_ts_params_pca()) if _is_svd_model(model_name) else (X_rand, client.setup_ts_params())
     enc_x = client.ts_encrypt_x(x, ctx)
 
     inference_times = _ts_or_pal_inference_test_loop(ts_model, enc_x)
 
     return inference_times
 
+def ts_benchmark_enc_dec(model_name) -> tuple:
+    x, ctx = (red_X_rand, client.setup_ts_params_pca()) if _is_svd_model(model_name) else (X_rand, client.setup_ts_params())
+    model = util.loadModelPickle(f"ts_plain_models/{model_name}")
+
+    enc_times = []
+    dec_times = []
+
+    for i in range(sample_size):
+        enc, dec = _ts_enc_dec_timers(model, x, ctx, i)
+        enc_times.append(enc)
+        dec_times.append(dec)
+        print(f"enc/dec {i} complete.")
+
+    return enc_times[3:], dec_times[3:]
+
+def _ts_enc_dec_timers(model, x, ctx_eval, i) -> tuple:
+    s1 = time.perf_counter()
+    enc_x = client.ts_encrypt_x_i(x[i], ctx_eval)
+    e1 = time.perf_counter()
+    enc_time = e1 - s1
+
+    # have the model output new result. Just decrypted straight after doesn't seem to be allowed? + prob more rigorous to do this way
+    enc_prelim_result = model.enc_prelim_predict(enc_x)
+
+    s2 = time.perf_counter()
+    plain_prelim_result = client.ts_decrypt(enc_prelim_result)
+    e2 = time.perf_counter()
+    dec_time = e2 - s2
+
+    return enc_time, dec_time
+
 def pal_benchmark_model(model_name):
     pal_model = util.loadModelPickle(f"pal_plain_models/{model_name}")
-    x = red_X_rand if _is_pca_model(model_name) else X_rand
+    x = red_X_rand if _is_svd_model(model_name) else X_rand
 
     public_key, private_key = client.pal_gen_keys()
     s = time.perf_counter()
@@ -272,21 +369,65 @@ def pal_benchmark_model(model_name):
     return inference_times
 
 
-def benchmarkModelPlain(model_name):
+def pal_benchmark_enc_dec(model_name) -> tuple:
+    x = red_X_rand if _is_svd_model(model_name) else X_rand
+    model = util.loadModelPickle(f"pal_plain_models/{model_name}")
+
+    public_key, private_key = client.pal_gen_keys()
+
+    enc_times = []
+    dec_times = []
+
+    for i in range(sample_size):
+        enc, dec = _pal_enc_dec_timers(model, x, public_key, private_key, i)
+        enc_times.append(enc)
+        dec_times.append(dec)
+        print(f"enc/dec {i} complete.")
+
+    return enc_times[3:], dec_times[3:]
+
+def _pal_enc_dec_timers(model, x, pub_key, priv_key, i):
+    s1 = time.perf_counter()
+    enc_x = client.pal_enc_x_i(pub_key, x[i])
+    e1 = time.perf_counter()
+    enc_time = e1 - s1
+
+    # have the model output new result. Just decrypted straight after doesn't seem to be allowed? + prob more rigorous to do this way
+    enc_prelim_result = model.enc_prelim_predict(enc_x)
+
+    s2 = time.perf_counter()
+    plain_prelim_result = client.pal_decrypt_prelim(priv_key, [enc_prelim_result])
+    e2 = time.perf_counter()
+    dec_time = e2 - s2
+
+    return enc_time, dec_time
+
+
+
+def zama_bench_plain_inference(model_name):
     inferenceTimes = []
-    model = z.loadModel(model_name)
-    is_pca_model = _is_pca_model(model_name)
+    model = util.loadModelPickle(f"zama_plain_models/{model_name}")
+
+    x = red_X_rand if _is_svd_model(model_name) else X_rand
 
     for i in range(len(X_rand)):
-        data = None 
-        if not is_pca_model:
-            data = X_rand[i:i+1] # i:i+1 preserves (1,n) 2d-ness
-        else:
-            data = red_X_rand[i:i+1]
-        inferenceTimes.append(inferenceTimePlain(model, data))
+        inferenceTimes.append(zama_plain_inference(model, x[i:i+1]))
         print(f"Inference {i} complete.")
 
-    return inferenceTimes[10:] # dropping first 10 elements
+    return inferenceTimes[3:] # dropping first 3 elements
+
+def ts_bench_plain_inference(model_name):
+    inferenceTimes = []
+    model = util.loadModelPickle(f"ts_plain_models/{model_name}")
+
+    x = red_X_rand if _is_svd_model(model_name) else X_rand
+
+    for i in range(len(X_rand)):
+        inferenceTimes.append(ts_plain_inference(model, x[i]))
+        print(f"Inference {i} complete.")
+
+    return inferenceTimes[3:] # dropping first 3 elements
+
  
 
 # TODO: change so that we just get red_X from ReducedModelData (load this)
@@ -309,17 +450,23 @@ def ts_inference_time_svm(model, enc_x_i) -> float:
     return end - start
 
 
-def inferenceTimePlain(model, data) -> float:
+def zama_plain_inference(model, data) -> float:
     start = time.perf_counter()
     model.predict(data)
+    end = time.perf_counter()
+    return end - start
+
+def ts_plain_inference(model, x_i):
+    start = time.perf_counter()
+    model.plaintext_predict(x_i)
     end = time.perf_counter()
     return end - start
 
 
 # _name() functions here (like private) intended to be used within other functions.
 
-def _is_pca_model(model_name) -> bool:
-    return model_name[:3] == "pca"
+def _is_svd_model(model_name) -> bool:
+    return model_name[:3] == "svd"
 
 def _zama_inference_test_loop(model, model_name, is_pca_model):
     cli, eval_keys = z.client(model_name)
@@ -334,7 +481,7 @@ def _zama_inference_test_loop(model, model_name, is_pca_model):
         inference_times.append(zama_inference_time(model, enc_x, eval_keys))
         print(f"Inference {i} complete.")
 
-    return inference_times[10:]
+    return inference_times[3:]
 
 def _ts_or_pal_inference_test_loop(model, enc_x):
     inference_times = []
@@ -345,7 +492,7 @@ def _ts_or_pal_inference_test_loop(model, enc_x):
         inference_times.append(stop - start)
         print(f"Inference {i} complete.")
 
-    return inference_times[10:]
+    return inference_times[3:] # dropping first 1 only for pal, since encryption is way too long..
 
 if __name__ == "__main__":
     main()

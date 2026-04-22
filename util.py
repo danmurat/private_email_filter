@@ -2,6 +2,8 @@ import pickle
 import torch
 import pandas as pd
 import json
+import numpy as np
+import random
 import tenseal as ts
 from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD
@@ -89,3 +91,24 @@ def load_single_ham_email(id):
 
     return test_ham.loc[test_ham["message_id"] == id]
 
+def randomise(n, X, y) -> tuple:
+    # these might have to be changed to an np.array
+    randomised_X = np.zeros((n, len(X[0])))
+    randomised_y = np.zeros((n, 1))
+    for i in range(n):
+        rand = random.randint(0, 1999) # 2000 is out of bounds..
+        randomised_X[i] = X[rand]
+        randomised_y[i] = y[rand]
+
+    return randomised_X, randomised_y
+
+def load_test_data() -> tuple:
+    model_data = loadModelPickle(model_data_path())
+    reduced_model_data = loadModelPickle(reduced_model_data_path())
+
+    X_test = model_data.get_X_test()  # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, BY ACCIDENT!!! (yes i spent the past hr debugging this)
+    y_test = model_data.get_y_test()
+    X_test = X_test.toarray()  # remember these are sparse when loaded
+    red_X_test = reduced_model_data.get_red_X_test()
+
+    return X_test, red_X_test, y_test
