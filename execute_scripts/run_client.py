@@ -5,7 +5,8 @@ import tenseal as ts
 
 base_url = "http://127.0.0.1:8000/"
 X_test, red_X_test, y_test = util.load_test_data()
-x_i, y = util.randomise(1, X_test, y_test)
+# TESTING ON SVD DATA
+x_i, y = util.randomise(1, red_X_test, y_test)
 
 def main():
     try:
