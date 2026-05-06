@@ -91,16 +91,25 @@ def load_single_ham_email(id):
 
     return test_ham.loc[test_ham["message_id"] == id]
 
+# prob don't want to do id. Rathe index in the list (which id doesn't count i don't think)
+def print_selected_test_email(index):
+    test_emails = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    #print(test_emails)
+    selected_email = test_emails.loc[index]["text"]
+
+    print(f"Email:\n\n {selected_email}\n")
+
 def randomise(n, X, y) -> tuple:
     # these might have to be changed to an np.array
     randomised_X = np.zeros((n, len(X[0])))
     randomised_y = np.zeros((n, 1))
+    rand = None
     for i in range(n):
         rand = random.randint(0, 1999) # 2000 is out of bounds..
         randomised_X[i] = X[rand]
         randomised_y[i] = y[rand]
 
-    return randomised_X, randomised_y
+    return randomised_X, randomised_y, rand
 
 def load_test_data() -> tuple:
     model_data = loadModelPickle(model_data_path())

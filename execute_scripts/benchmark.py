@@ -9,6 +9,9 @@ import math
 import scipy.stats as st
 import tenseal as ts
 import client
+import tracemalloc
+import psutil
+import os
 z = ZamaModels() # just to use the loadModels() method
 
 X_test, red_X_test, y_test = util.load_test_data()
@@ -39,10 +42,13 @@ def main():
     model as a whole. 
     """
 
-    test_model_latency("plain_ts_svm")
+    #test_model_latency("plain_ts_svm")
 
     # 22nd apr
     #test_enc_dec_times("pal_svd_log")
+
+    #test_optimised_ts_server_usage()
+    cpu_usage()
 
 ### ---------------- ###
 
@@ -77,6 +83,55 @@ def test_model_latency(model_name):
     mean_low, mean_high = getMeanRange(mean, err)
 
     print(f"Inference mean: {mean_low}ms-{mean_high}ms, 95% CI")
+
+# cpu and mem
+def test_optimised_ts_server_usage():
+    ctx = client.setup_ts_params()
+    ts_svd_svm = util.loadModelPickle("ts_plain_models/svd_svm")
+
+    results = []
+
+    for i in range(sample_size):
+        enc_x_i = client.ts_encrypt_x_i(red_X_rand[i], ctx)
+
+        enc_email_bytes = enc_x_i.serialize()
+        pub_ctx_bytes = ctx.serialize(
+            save_public_key=True,
+            save_secret_key=False,
+            save_relin_keys=True,
+            save_galois_keys=True
+        )
+
+        # 'server running'
+        tracemalloc.start()
+        # process = psutil.Process(os.getpid())
+        # process.cpu_percent(interval=None)
+        pub_ctx_bytes = pub_ctx_bytes.read()     # should be python bin objs now
+        enc_email_bytes = enc_email_bytes.read()
+
+        pub_ctx = ts.context_from(pub_ctx_bytes)
+        enc_email = ts.ckks_vector_from(pub_ctx, enc_email_bytes)
+
+        enc_prelim_result = ts_svd_svm.enc_prelim_predict(enc_email)
+        enc_presult_bytes = enc_prelim_result.serialize()
+
+        current, peak = tracemalloc.get_traced_memory()
+        peak_MB = peak / 10**6
+        tracemalloc.stop()
+        #cpu_usage = process.cpu_percent(interval=None)
+
+        results.append(peak_MB)
+        #results.append(cpu_usage)
+
+    adjusted = results[3:]
+
+    mean, sd, var, n = getStats(adjusted)
+    printStats(mean, sd, var, n)
+    err = calcErrorMargin(sd, n)
+
+    mean_low, mean_high = getMeanRange(mean, err)
+
+    print(f"Usage: {mean_low}-{mean_high}, 95% CI")
 
 
 def test_enc_dec_times(model_name):
@@ -263,6 +318,20 @@ def getMeanRange(mean, err) -> tuple:
 
     return (low, high)
 
+# i know this is horribly manual, but some reason desearilising keys freezes when i try to test here.
+# so using printed results from sending 30 requests to server
+def cpu_usage():
+    usage = [97.9, 93.8, 95.7, 96.6, 93.2, 97.4, 96.4, 98.1, 98.1, 97.4,
+             93.1, 87.4, 89.4, 93.6, 90.9, 98.7, 93.6, 98.4, 91.6, 97.6,
+             90.7, 92.1, 96.8, 98.1, 92.4, 98.6, 97.8, 96.5, 89.3, 92.6]
+
+    mean, sd, var, n = getStats(usage)
+    printStats(mean, sd, var, n)
+    err = calcErrorMargin(sd, n)
+
+    mean_low, mean_high = getMeanRange(mean, err)
+
+    print(f"CPU (%) mean: {mean_low}-{mean_high}, 95% CI")
 
 
 # returns n timed inferences
