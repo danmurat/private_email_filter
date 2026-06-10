@@ -10,7 +10,8 @@ X_test, red_X_test, y_test = util.load_test_data()
 # TESTING ON SVD DATA
 x_i, y, index = util.randomise(1, red_X_test, y_test)
 
-def main():
+
+def main() -> None:
     try:
         util.print_selected_test_email(index)
 
@@ -24,11 +25,8 @@ def main():
         if choice == "n":
             sys.exit()
 
-        response = requests.post(
-            base_url + "spamfilter/ts",
-            files=data
-        )
-        response.raise_for_status() # incase error (not sure why this is needed. thought error would just throw)
+        response = requests.post(base_url + "spamfilter/ts", files=data)
+        response.raise_for_status()  # incase error (not sure why this is needed. thought error would just throw)
 
         if response.status_code == 200:
             enc_prelim_result_bytes = response.content
@@ -62,18 +60,18 @@ def ts_data_to_send() -> tuple:
         save_public_key=True,
         save_secret_key=False,
         save_relin_keys=True,
-        save_galois_keys=True
+        save_galois_keys=True,
     )
 
     print(f"Encrypted email:\n\n {enc_email_bytes[:200]}.....\n")
 
     tuple_data = {
         "pub_ctx": ("pub_ctx.bin", pub_ctx_bytes, "application/octet-stream"),
-        "enc_email": ("enc_email.bin", enc_email_bytes, "application/octet-stream")
+        "enc_email": ("enc_email.bin", enc_email_bytes, "application/octet-stream"),
     }
 
-
     return tuple_data, ctx
+
 
 # for demo:
 # need to print the contents! Both client and server to showcase what's happening.

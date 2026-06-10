@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+
 
 class EncSVM:
     def __init__(self, ts_svm):
@@ -11,17 +11,16 @@ class EncSVM:
 
     def plaintext_predict(self, x_i):
         y = int(np.sign(np.dot(self.w, x_i) - self.b))
-        if y == -1: y = 0
+        if y == -1:
+            y = 0
 
         return y
 
-
     # PASS REGULAR ARRAY HERE, NOT TORCH TENSOR
-    def testAcc(self, X, y):
+    def test_acc(self, X, y):
         correct_counter = 0
         length = len(X)
         y_pred_list = []
-
 
         for i in range(length):
             # sign just turns anything positive to 1 and negative to -1
@@ -35,5 +34,5 @@ class EncSVM:
 
         accuracy = correct_counter / length
         print(f"SVM Accuracy = {accuracy}")
-        #print(y_pred_list)
+        # print(y_pred_list)
         return y_pred_list

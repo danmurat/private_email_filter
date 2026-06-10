@@ -1,12 +1,16 @@
-import pandas as pd
-import numpy as np
-import re
 import json
+import re
+
+import numpy as np
+import pandas as pd
+from numpy.typing import NDArray
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 """
 Sets up our given dataset to be compatable with training classifier ML models
 """
+
+
 class PreProcess:
     def __init__(self):
         self.train_data = None
@@ -15,59 +19,89 @@ class PreProcess:
         self.v_test_text = None
         self.word_counts_threshold_indexed = None
 
-
     # (X_train, y_train, X_test, y_test)
     # to be given to DataObj after preprocessing
-    def getData(self):
+    def get_data(self) -> tuple:
         # if one is set up, they'll all be setup, so pointless checking
-        is_data_setup = self.v_train_text is not None #!= None and self.train_data.any() != None and self.v_test_text.any() != None and self.test_data.any() != None
-        
-        if is_data_setup:
-            return self.v_train_text, self.train_data["label"], self.v_test_text, self.test_data["label"]
-        else:
-            raise ValueError("Data missing (type None). Run preprocess() first or check data integrity.")
+        is_data_setup = (
+            self.v_train_text is not None
+        )  #!= None and self.train_data.any() != None and self.v_test_text.any() != None and self.test_data.any() != None
 
-    def getTrainTestText(self):
-        train, test = self._loadDataset()
+        if is_data_setup:
+            return (
+                self.v_train_text,
+                self.train_data["label"],
+                self.v_test_text,
+                self.test_data["label"],
+            )
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
+
+    def get_train_test_text(self) -> tuple[pd.Series, pd.Series]:
+        train, test = self._load_dataset()
 
         return train["text"], test["text"]
 
     # yep pretty much 50/50 (vary slight variation)
-    def is_data_imbalanced(self):
-        train, test = self._loadDataset()
+    def is_data_imbalanced(self) -> None:
+        train, test = self._load_dataset()
 
-        print("length of train data = ",len(train))
-        print("length of ham = ",len(train[train["label"] == 0]))
+        print("length of train data = ", len(train))
+        print("length of ham = ", len(train[train["label"] == 0]))
 
-    def getTrainingData(self):
-        return self.train_data
-    
-    def getTestingData(self):
-        return self.test_data
+    def get_training_data(self) -> pd.DataFrame:
+        if self.train_data is not None:
+            return self.train_data
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
 
-    def getVectorisedTrainText(self):
-        return self.v_train_text
+    def get_testing_data(self) -> pd.DataFrame:
+        if self.test_data is not None:
+            return self.test_data
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
 
-    def getVectorisedTestText(self):
-        return self.v_test_text
-    
-    def getWordCountsThresholdIndexed(self):
-        return self.word_counts_threshold_indexed
+    def get_vectorised_train_text(self) -> NDArray[np.float64]:
+        if self.v_train_text is not None:
+            return self.v_train_text
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
 
-    def preprocess_tfidf(self):
-        train, test = self._loadDataset()
+    def get_vectorised_test_text(self) -> NDArray[np.float64]:
+        if self.v_test_text is not None:
+            return self.v_test_text
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
+
+    def get_word_counts_thresehold_indexed(self) -> dict[str, int]:
+        if self.word_counts_threshold_indexed is not None:
+            return self.word_counts_threshold_indexed
+        else:
+            raise ValueError(
+                "Data missing (type None). Run preprocess() first or check data integrity."
+            )
+
+    def preprocess_tfidf(self) -> None:
+        train, test = self._load_dataset()
         self.train_data = train
         self.test_data = test
-        self.tfidf(train["text"], test["text"])
+        self.fit_tfidf(train["text"], test["text"])
 
     # after testing against our own BoW, this fares better. Including so we can save
     # text data in this format for encrypted training and testing.
-    def tfidf(self, train_text, test_text):
+    def fit_tfidf(self, train_text: pd.Series, test_text: pd.Series) -> None:
         tfidf_vec = TfidfVectorizer(
-            stop_words="english",
-            max_features=3020,
-            min_df=2,
-            max_df=0.8
+            stop_words="english", max_features=3020, min_df=2, max_df=0.8
         )
 
         tfidf_train = tfidf_vec.fit_transform(train_text)
@@ -77,56 +111,64 @@ class PreProcess:
         self.v_test_text = tfidf_test
 
     # RUN THIS SO VARIABLES GET ASSIGNED!
-    def preprocess_bow(self):
+    def preprocess_bow(self) -> None:
         print("loading datasets...")
 
-        data = self._loadDataset()
-        self.train_data = self._transformText(data[0])
-        self.test_data = self._transformText(data[1])
+        data = self._load_dataset()
+        self.train_data = self._transform_text(data[0])
+        self.test_data = self._transform_text(data[1])
 
         print("setting up word count dictionaries...")
-        
+
         # TODO: we should probably be accessing ALL text, not just train
-        word_counts = self._getWordCounts(self.train_data["text"])
-        word_counts_threshold = self._wordCountsThreshold(word_counts, 200)
-        self.word_counts_threshold_indexed = self._wordCountsThresholdIndexed(word_counts_threshold)
+        word_counts = self._get_word_counts(self.train_data["text"])
+        word_counts_threshold = self._word_counts_thresehold(word_counts, 200)
+        self.word_counts_threshold_indexed = self._word_counts_thresehold_indexed(
+            word_counts_threshold
+        )
         # into json so we can access it later for preprocessing single emails (in demo)
-        self._saveIndexedWords100(self.word_counts_threshold_indexed)
-        
+        self._save_indexed_words_100(self.word_counts_threshold_indexed)
+
         print("tokenising text...")
-        
-        tokenised_train_text = self.tokeniseText(self.train_data["text"], self.word_counts_threshold_indexed)
-        tokenised_test_text = self.tokeniseText(self.test_data["text"], self.word_counts_threshold_indexed)
+
+        tokenised_train_text = self.tokenise_text(
+            self.train_data["text"], self.word_counts_threshold_indexed
+        )
+        tokenised_test_text = self.tokenise_text(
+            self.test_data["text"], self.word_counts_threshold_indexed
+        )
 
         print("vectorising dataset text for training...")
 
         dimensions = len(self.word_counts_threshold_indexed)
-        self.v_train_text = self.vectoriseText(tokenised_train_text, dimensions)
-        self.v_test_text = self.vectoriseText(tokenised_test_text, dimensions)
+        self.v_train_text = self.vectorise_text(tokenised_train_text, dimensions)
+        self.v_test_text = self.vectorise_text(tokenised_test_text, dimensions)
 
         print("\npreprocessing complete!\n")
 
     # for demo purposes
-    def preprocessSingleEmail(self, mail_df, indexedDict):
+    def preprocess_single_email(
+        self, mail_df: pd.DataFrame, indexedDict: dict[str, int]
+    ) -> NDArray[np.float64]:
 
-        #print("transforming text...")
-        transformed_data = self._transformText(mail_df)
+        # print("transforming text...")
+        transformed_data = self._transform_text(mail_df)
 
         # word counts already set up (and we saved into a seperate file), so we can skip this
 
-        #print("tokenising text...")
-        tokenised = self.tokeniseText(transformed_data["text"], indexedDict)
+        # print("tokenising text...")
+        tokenised = self.tokenise_text(transformed_data["text"], indexedDict)
 
-        #print("vectorising text...")
-        vector = self.vectoriseText(tokenised, len(indexedDict))
+        # print("vectorising text...")
+        vector = self.vectorise_text(tokenised, len(indexedDict))
 
-        #print("complete!\n")
+        # print("complete!\n")
 
         return vector
 
-
-
-    def vectoriseText(self, tokenised_text_list, dimensions):
+    def vectorise_text(
+        self, tokenised_text_list: list[list[int]], dimensions: int
+    ) -> NDArray[np.float64]:
         entries = len(tokenised_text_list)
         # v will hold all vectorised text (will have v[0] = 0, v[1] = 1, etc..)
         v = np.zeros((entries, dimensions))
@@ -138,34 +180,41 @@ class PreProcess:
         return v
 
     # this transforms the og text string into a list of numbers (which are the top100 indexed)
-    def tokeniseText(self, text_data, word_counts_threshold_indexed) -> list:
-        #loop through Text
-        tokenised_text_list = []
-        #top100_indexed = self._top100Indexed()
+    def tokenise_text(
+        self, text_data: pd.Series, word_counts_threshold_indexed: dict[str, int]
+    ) -> list[list[int]]:
+        # loop through Text
+        tokenised_text_list: list[list[int]] = []
+        # top100_indexed = self._top100Indexed()
         for t in text_data:
             # splits to list of words (rather than single string of sentences)
-            t_splitwords = t.split()
-            token_list = []
+            t_splitwords: list[str] = t.split()
+            token_list: list[int] = []
             # check if each word is in dict and transform to index
             for i in range(len(t_splitwords)):
                 if t_splitwords[i] in word_counts_threshold_indexed:
                     token_list.append(word_counts_threshold_indexed[t_splitwords[i]])
-            
+
             tokenised_text_list.append(token_list)
-        
+
         return tokenised_text_list
 
-    # each word is given a number (index), so we can vectorise each email for the model (fixed dimensions)
-    def _wordCountsThresholdIndexed(self, word_counts_threshold) -> dict:
+    # each word is given a number (index) instead of frequency now, so we can vectorise
+    # each email for the model (fixed dimensions)
+    def _word_counts_thresehold_indexed(
+        self, word_counts_threshold: dict[str, int]
+    ) -> dict[str, int]:
         word_counts_threshold_indexed = {}
-        #wordCounts100 = self._wordCounts100()
+        # wordCounts100 = self._wordCounts100()
         for i, key in enumerate(word_counts_threshold):
             word_counts_threshold_indexed[key] = i
 
         return word_counts_threshold_indexed
 
     # we'll keep the words that have been used at least n times. (default 100)
-    def _wordCountsThreshold(self, word_counts: dict, threshold: int = 100) -> dict:
+    def _word_counts_thresehold(
+        self, word_counts: dict[str, int], threshold: int = 100
+    ) -> dict[str, int]:
         # word_counts = self._getWordCounts(self.train_data["text"])
         word_counts_threshold = {}
         for key in word_counts:
@@ -175,26 +224,29 @@ class PreProcess:
         return word_counts_threshold
 
     # builds a frequency count for each word using dictionaries (hashmap)
-    def _getWordCounts(self, text) -> dict:
+    def _get_word_counts(self, text: pd.Series) -> dict[str, int]:
         word_counts = {}
-        
+
         for textrow in text:
             words_list = textrow.split()
             for word in words_list:
                 if word in word_counts:
                     word_counts[word] += 1
                 else:
-                    word_counts[word] = 1 # simply creates
-        
-        return word_counts 
-        
-    
-    def _transformText(self, data) -> tuple:
-        non_alphanumeric = re.compile(r'(\n|\W)') # we include \n too to get out the way
-        numbers = re.compile(r'(\d+)')
-        whitespaces = re.compile(r'(\s+)')
-        rejoin_s = re.compile(r'(\s{1}s\s{1})') # any s with single space before and after
-        common = re.compile(r'(\sa\s|\sand\s|\sthe\s|\sthat\s|\sof\s|\swith\s|\sas\s)')
+                    word_counts[word] = 1  # simply creates
+
+        return word_counts
+
+    def _transform_text(self, data: pd.DataFrame) -> pd.DataFrame:
+        non_alphanumeric = re.compile(
+            r"(\n|\W)"
+        )  # we include \n too to get out the way
+        numbers = re.compile(r"(\d+)")
+        whitespaces = re.compile(r"(\s+)")
+        rejoin_s = re.compile(
+            r"(\s{1}s\s{1})"
+        )  # any s with single space before and after
+        common = re.compile(r"(\sa\s|\sand\s|\sthe\s|\sthat\s|\sof\s|\swith\s|\sas\s)")
 
         data["text"] = data["text"].str.replace(non_alphanumeric, " ", regex=True)
 
@@ -208,16 +260,12 @@ class PreProcess:
 
         return data
 
-
-    def _loadDataset(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        train = pd.read_json("../spam_dataset/train.jsonl", lines=True)
-        test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    def _load_dataset(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        train: pd.DataFrame = pd.read_json("../spam_dataset/train.jsonl", lines=True)
+        test: pd.DataFrame = pd.read_json("../spam_dataset/test.jsonl", lines=True)
 
         return train, test
 
-
-    
-
-    def _saveIndexedWords100(self, dict):
+    def _save_indexed_words_100(self, dict: dict[str, int]) -> None:
         with open("indexed100.json", "w") as file:
             json.dump(dict, file, indent=4)

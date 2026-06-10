@@ -2,6 +2,7 @@
 Holds the PCA reduced training and testing data to be saved and loaded.
 """
 
+
 class ReducedModelData:
     def __init__(self, red_X_train, red_X_test):
         self.red_X_train = red_X_train

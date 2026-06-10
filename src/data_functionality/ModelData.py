@@ -2,6 +2,7 @@
 Holds (already pre-processed) training and testing data that we'll save and load as a pkl file.
 """
 
+
 class ModelData:
     def __init__(self, X_train, y_train, X_test, y_test):
         self.X_train = X_train

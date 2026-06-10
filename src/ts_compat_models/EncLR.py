@@ -10,9 +10,11 @@ scenes).
 This is used to be able to save the model (and load it later), with its weights and bias, and to be able
 to perform encrypted inferences.
 """
+
+
 class EncLR:
     def __init__(self, trained_lr):
-        self.trained_lr = trained_lr # so we can call testAccuracy
+        self.trained_lr = trained_lr  # so we can call testAccuracy
         self.w = trained_lr.log_reg.weight.data.tolist()[0]
         self.b = trained_lr.log_reg.bias.data.tolist()
 
@@ -23,9 +25,9 @@ class EncLR:
     # for plaintext
     def plaintext_predict(self, x_i):
         prelim_y = np.dot(x_i, self.w) - self.b
-        #print(f"plain log prelim_y = {prelim_y}")
+        # print(f"plain log prelim_y = {prelim_y}")
         y = client.ts_client_finish_prediction_log(prelim_y)
-        #print(f"post sigmoid y = {y}")
+        # print(f"post sigmoid y = {y}")
 
         if y < 0.5:
             y = 0
@@ -34,8 +36,7 @@ class EncLR:
 
         return y
 
-
-    def testAccuracy(self, X_test):
+    def test_accuracy(self, X_test):
         y_pred = self.trained_lr(X_test)
 
         return y_pred

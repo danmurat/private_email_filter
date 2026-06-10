@@ -4,6 +4,7 @@ pickle_objects/
 .artifacts/
 .idea/
 .vscode/
+.ruff_cache/
 __pycache__/
 *.pyc
 *.pyo

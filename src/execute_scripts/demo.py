@@ -1,15 +1,16 @@
-from PreProcess import PreProcess
-from HandleModel import HandleModel
-from concrete.ml.deployment import FHEModelClient
-import numpy as np
 import sys
-import spam_imp.src.util as util
 import time
 
+import numpy as np
+from HandleModel import HandleModel
+from PreProcess import PreProcess
+
+import spam_imp.src.util as util
+
 p = PreProcess()
-#p.preprocess() # including these just for testing against whole dataset
+# p.preprocess() # including these just for testing against whole dataset
 h = HandleModel(p)
-#h.dataSetup()
+# h.dataSetup()
 
 # index = 2 is an pre-ejaculation spam email. This might be good to demo lol
 # we should probably do 2 examples. One spam, one not
@@ -23,13 +24,15 @@ h = HandleModel(p)
 # def load():
 #     return h.loadModel("svm")
 
-def handleLoading(message):
+
+def handle_loading(message: str) -> None:
     dots = [".", "..", "..."]
     for i in range(12):
         print(f"\r{message}{dots[i % 3]}", end="", flush=True)
         time.sleep(0.25)
 
-def printResult(result):
+
+def print_result(result: np.intp) -> None:
     if result == 0:
         print("\n\nPrediction: NOT SPAM!")
     else:
@@ -48,18 +51,18 @@ pauses and questions ("send to server?" for example). Should completely be ran i
 
 # TODO: add an "inference: {result}seconds" when classifying
 if __name__ == "__main__":
-    # handleLoading("Recieving email") 
+    # handleLoading("Recieving email")
 
     # ham_email = p.loadSingleHamEmail(7311)
     # ham_email_label = ham_email["label"].iloc[0] # of course = 0
 
-    #print("Email: \n", ham_email["text"].iloc[0])
+    # print("Email: \n", ham_email["text"].iloc[0])
 
     # pass these into preprocess (single), so it returns vectorised set.
 
     # these are done "under the hood"
-    indexed100 = util.getIndexedDict() # working!
-    #ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
+    indexed100 = util.get_indexed_dict()  # working!
+    # ham_email_vector = p.preprocessSingleEmail(ham_email, indexed100) # final vectorised format
 
     # print("ham vector shape = ", ham_email_vector.shape)
 
@@ -101,16 +104,15 @@ if __name__ == "__main__":
     # result = np.argmax(result_probabilities)
     # printResult(result)
 
-
     # choice = input("\n\nContinue? (y/n): \n")
 
     # if choice == "n":
     #     sys.exit()
 
-    # handles same as above but for spam 
+    # handles same as above but for spam
 
-    handleLoading("Recieving email") 
-    
+    handle_loading("Recieving email")
+
     spam_email = util.load_single_spam_email_df(27070)
     spam_email_label = spam_email["label"].iloc[0]
     print("\n", spam_email["text"].iloc[0])
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     if choice == "n":
         sys.exit()
 
-    handleLoading("Encrypting email")
+    handle_loading("Encrypting email")
     enc_spam_data = cli.quantize_encrypt_serialize(spam_email_vector)
     print(f"\n\nEncrypted data: \n\n {enc_spam_data[:350]}\n...truncated...")
 
@@ -129,17 +131,16 @@ if __name__ == "__main__":
     if choice == "n":
         sys.exit()
 
-
-    handleLoading("Sending encrypted data")
+    handle_loading("Sending encrypted data")
     enc_spam_result = server_model.run(enc_spam_data, eval_keys)
     print("\nresult recieved!\n")
     print(f"\nEncrypted result: \n\n {enc_spam_result[:350]}\n...truncated...")
-    
+
     choice = input("\nDecrypt result? (y/n): \n")
     if choice == "n":
         sys.exit()
 
-    handleLoading("Decrypting")
+    handle_loading("Decrypting")
     spam_result_probs = cli.deserialize_decrypt_dequantize(enc_spam_result)
     spam_result = np.argmax(spam_result_probs)
-    printResult(spam_result)
+    print_result(spam_result)
