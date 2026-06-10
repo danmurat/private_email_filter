@@ -1,3 +1,13 @@
 zama_models/
 zama_keys/
 pickle_objects/
+.artifacts/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+indexed100.json
+pyproject.toml
+screeplot_large.png
