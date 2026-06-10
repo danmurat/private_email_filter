@@ -1,5 +1,5 @@
 import numpy as np
-import spam_imp.src.client as client
+import src.client as client
 
 """
 Because of how 'magical' the tutorial was for the Logistic regression implementation, we need

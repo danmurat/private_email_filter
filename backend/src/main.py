@@ -1,27 +1,28 @@
-import os
-
-import psutil  # how much cpu power we used
 import tenseal as ts
+import backend.src.util as util
 from fastapi import FastAPI, File, Response, UploadFile
-
-import spam_imp.src.util as util
 
 app = FastAPI()
 # 'our server model'
 ts_svd_svm = util.load_model_pickle("ts_plain_models/svd_svm")
 
+"""
+Run this file from root directory (spam_imp/).
+bash command: uvicorn backend.src.main:app --reload
+"""
+
 
 @app.post("/spamfilter/ts")
 async def encrypted_prediction(
-    pub_ctx: UploadFile = File(...), enc_email: UploadFile = File(...)
+    pub_ctx_file: UploadFile = File(...), enc_email_file: UploadFile = File(...)
 ):
 
     # tracemalloc.start()
-    process = psutil.Process(os.getpid())
-    process.cpu_percent(interval=None)
+    # process = psutil.Process(os.getpid())
+    # process.cpu_percent(interval=None)
 
-    pub_ctx_bytes = await pub_ctx.read()  # should be python bin objs now
-    enc_email_bytes = await enc_email.read()
+    pub_ctx_bytes = await pub_ctx_file.read()  # should be python bin objs now
+    enc_email_bytes = await enc_email_file.read()
 
     print(f"Received Encrypted email:\n\n {enc_email_bytes[:200]}.....\n")
 

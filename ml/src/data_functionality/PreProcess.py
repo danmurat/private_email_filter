@@ -260,9 +260,10 @@ class PreProcess:
 
         return data
 
+    # assumes your running script from ml/ directory
     def _load_dataset(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        train: pd.DataFrame = pd.read_json("../spam_dataset/train.jsonl", lines=True)
-        test: pd.DataFrame = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+        train: pd.DataFrame = pd.read_json("dataset/train.jsonl", lines=True)
+        test: pd.DataFrame = pd.read_json("dataset/test.jsonl", lines=True)
 
         return train, test
 

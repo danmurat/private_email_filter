@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA, TruncatedSVD
 from numpy.typing import NDArray
-import spam_imp.src.util as util
-from spam_imp.src.ZamaModels import ZamaModels
+import src.util as util
+from src.ZamaModels import ZamaModels
 
 model_data = util.load_model_pickle(util.model_data_path())
 red_model_data = util.load_model_pickle(util.reduced_model_data_path())

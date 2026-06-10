@@ -1,10 +1,9 @@
 import time
 
 import phe as paillier
-
-import spam_imp.src.client as client
-import spam_imp.src.util as util
-from spam_imp.src.data_functionality.PreProcess import PreProcess
+import src.client as client
+import src.util as util
+from src.data_functionality.PreProcess import PreProcess
 
 model_data = util.load_model_pickle(util.model_data_path())
 reduced_model_data = util.load_model_pickle(util.reduced_model_data_path())

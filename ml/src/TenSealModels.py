@@ -1,8 +1,8 @@
 import tenseal as ts
 import torch
 
-from spam_imp.src.ts_compat_models.LinearSVM import LinearSVM
-from spam_imp.src.ts_compat_models.LogisticReg import LogisticReg
+from src.ts_compat_models.LinearSVM import LinearSVM
+from src.ts_compat_models.LogisticReg import LogisticReg
 
 """
 tenseal uses Microsoft's SEAL c++ lib, and gives us a python interface to interact with it.
@@ -46,12 +46,12 @@ class TenSealModels:
 
     def log_predictions(self, log_model, X_test):
         # i know log_model.blahblah(pass in the same object again...). Bear with
-        y_pred = log_model.testAccuracy(X_test)
+        y_pred = log_model.test_accuracy(X_test)
         return y_pred
 
     # this is specifically for the pytorch lr class, not the encrypted lr that we save later
     def torch_log_predictions(self, log_model, X_test, y_test):
-        y_pred = log_model.testAccuracy(X_test, y_test)
+        y_pred = log_model.test_accuracy(X_test, y_test)
         return y_pred
 
     # epochs=5000 best we've found with step_size=0.001
@@ -62,7 +62,7 @@ class TenSealModels:
         return model
 
     def svm_predictions(self, ts_svm_model, X_test, y_test):
-        y_pred = ts_svm_model.testAcc(X_test, y_test)
+        y_pred = ts_svm_model.test_acc(X_test, y_test)
         return y_pred
 
     # DELETE WHEN WE BETTER UNDERSTAND ALL THIS!

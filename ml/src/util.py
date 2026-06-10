@@ -23,12 +23,12 @@ Always run from root.
 
 
 def save_model_pickle(model: Any, name: str) -> None:
-    with open(f"pickle_objects/{name}.pkl", "wb") as file:
+    with open(f"models/pickle_objects/{name}.pkl", "wb") as file:
         pickle.dump(model, file)
 
 
 def load_model_pickle(name: str) -> Any:
-    with open(f"pickle_objects/{name}.pkl", "rb") as file:
+    with open(f"models/pickle_objects/{name}.pkl", "rb") as file:
         return pickle.load(file)
 
 
@@ -110,7 +110,7 @@ def get_indexed_dict() -> dict[str, int]:
 
 
 def load_single_ham_email(id: int) -> pd.DataFrame:
-    test = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    test = pd.read_json("dataset/test.jsonl", lines=True)
     test_ham = test.loc[test["label"] == 0]
     # print(test_ham)
 
@@ -119,7 +119,7 @@ def load_single_ham_email(id: int) -> pd.DataFrame:
 
 # prob don't want to do id. Rathe index in the list (which id doesn't count i don't think)
 def print_selected_test_email(index: int) -> None:
-    test_emails = pd.read_json("../spam_dataset/test.jsonl", lines=True)
+    test_emails = pd.read_json("dataset/test.jsonl", lines=True)
     # print(test_emails)
     selected_email = test_emails.loc[index]["text"]
 

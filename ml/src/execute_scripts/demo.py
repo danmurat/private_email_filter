@@ -2,17 +2,18 @@ import sys
 import time
 
 import numpy as np
-from HandleModel import HandleModel
-from PreProcess import PreProcess
+import src.util as util
 
-import spam_imp.src.util as util
-
+"""
+leave errors, since the project changed a lot since my presentation.
+Likely delete this file at some point. Not used.
+"""
 p = PreProcess()
 # p.preprocess() # including these just for testing against whole dataset
 h = HandleModel(p)
 # h.dataSetup()
 
-# index = 2 is an pre-ejaculation spam email. This might be good to demo lol
+# index = 2 is an pre-ejaculation spam email. This might be good to demo lol. LMAO, it was not. Great experience tho
 # we should probably do 2 examples. One spam, one not
 # def testSpam():
 #     p.preprocessSingleEmail(2, True)

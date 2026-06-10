@@ -1,6 +1,6 @@
-zama_models/
-zama_keys/
-pickle_objects/
+ml/models/
+ml/dataset/
+ml/notebooks/
 .artifacts/
 .idea/
 .vscode/

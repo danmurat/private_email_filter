@@ -1,8 +1,8 @@
 import numpy as np
 from sklearn.metrics import classification_report
 
-import spam_imp.src.util as util
-from spam_imp.src.TenSealModels import TenSealModels
+import src.util as util
+from src.TenSealModels import TenSealModels
 
 # DATA
 model_data = util.load_model_pickle(util.model_data_path())

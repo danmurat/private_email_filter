@@ -1,10 +1,10 @@
 import tenseal as ts
 from tenseal import Context
 
-import spam_imp.src.client as client
-import spam_imp.src.util as util
-from spam_imp.src.data_functionality.PreProcess import PreProcess
-from spam_imp.src.TenSealModels import TenSealModels
+import src.client as client
+import src.util as util
+from src.data_functionality.PreProcess import PreProcess
+from src.TenSealModels import TenSealModels
 
 """
 Any random testing needed is done in here.

@@ -1,12 +1,12 @@
-import spam_imp.src.util as util
-from spam_imp.src.data_functionality.ModelData import ModelData
-from spam_imp.src.data_functionality.PreProcess import PreProcess
-from spam_imp.src.data_functionality.ReducedModelData import ReducedModelData
-from spam_imp.src.paillier_compat_models.EncLinear import EncLinear
-from spam_imp.src.TenSealModels import TenSealModels
-from spam_imp.src.ts_compat_models.EncLR import EncLR
-from spam_imp.src.ts_compat_models.EncSVM import EncSVM
-from spam_imp.src.ZamaModels import ZamaModels
+import src.util as util
+from src.data_functionality.ModelData import ModelData
+from src.data_functionality.PreProcess import PreProcess
+from src.data_functionality.ReducedModelData import ReducedModelData
+from src.paillier_compat_models.EncLinear import EncLinear
+from src.TenSealModels import TenSealModels
+from src.ts_compat_models.EncLR import EncLR
+from src.ts_compat_models.EncSVM import EncSVM
+from src.ZamaModels import ZamaModels
 
 """
 This file intends to actually train and save any HE compatable ML models,
@@ -54,7 +54,9 @@ def main() -> None:
     # ts_svd_train_and_save()
     # pal_save()
 
-    # retraining and saving all models with tfidf
+    # re-running after restructuring project directories (pickle didn't like it).
+    # preprocess_and_save()
+    ts_svd_train_and_save()
     print("\n\nModel setup done.\n")
 
 

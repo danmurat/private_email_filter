@@ -5,9 +5,9 @@ import tracemalloc
 import numpy as np
 import tenseal as ts
 
-import spam_imp.src.client as client
-import spam_imp.src.util as util
-from spam_imp.src.ZamaModels import ZamaModels
+import src.client as client
+import src.util as util
+from src.ZamaModels import ZamaModels
 
 z = ZamaModels()  # just to use the loadModels() method
 

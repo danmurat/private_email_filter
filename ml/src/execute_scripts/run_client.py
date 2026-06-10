@@ -1,8 +1,8 @@
-import requests
 import sys
 
-import spam_imp.src.util as util
-import spam_imp.src.client as client
+import requests
+import src.client as client
+import src.util as util
 import tenseal as ts
 
 base_url = "http://127.0.0.1:8000/"
@@ -12,9 +12,9 @@ x_i, y, index = util.randomise(1, red_X_test, y_test)
 
 
 def main() -> None:
-    try:
-        util.print_selected_test_email(index)
+    util.print_selected_test_email(index)
 
+    try:
         choice = input("\nEncrypt email? (y): \n")
         if choice == "n":
             sys.exit()
@@ -66,8 +66,12 @@ def ts_data_to_send() -> tuple:
     print(f"Encrypted email:\n\n {enc_email_bytes[:200]}.....\n")
 
     tuple_data = {
-        "pub_ctx": ("pub_ctx.bin", pub_ctx_bytes, "application/octet-stream"),
-        "enc_email": ("enc_email.bin", enc_email_bytes, "application/octet-stream"),
+        "pub_ctx_file": ("pub_ctx.bin", pub_ctx_bytes, "application/octet-stream"),
+        "enc_email_file": (
+            "enc_email.bin",
+            enc_email_bytes,
+            "application/octet-stream",
+        ),
     }
 
     return tuple_data, ctx
