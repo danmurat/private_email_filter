@@ -1,0 +1,10 @@
+concrete_python
+fastapi
+matplotlib
+numpy
+pandas
+phe
+Requests
+scikit_learn
+tenseal
+torch
