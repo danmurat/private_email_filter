@@ -2,11 +2,14 @@ name: Python Backend
 
 on:
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
 
 jobs:
   build-and-test:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -26,3 +29,25 @@ jobs:
         run: |
           python --version
           echo "python working!"
+
+  ai-review:
+    needs: build-and-test # only runs if build-and-test is successful
+    if: |
+      github.event.sender.type != 'Bot' &&
+      (github.event_name == 'pull_request' || github.event_name == 'issue_comment')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+    steps:
+    - name: PR Agent
+      uses: The-PR-Agent/pr-agent@v0.36.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        config.model: "gemini/gemini-3.5-flash"
+        config.fallback_models: '["gemini/gemini-3.1-flash-lite-preview"]'
+        GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        github_action_config.auto_review: "true"
+        github_action_config.auto_describe: "false"
+        github_action_config.auto_improve: "false"
