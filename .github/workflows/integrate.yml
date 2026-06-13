@@ -1,10 +1,9 @@
 name: Python Backend
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-
 
 jobs:
   build-and-test:
@@ -18,10 +17,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    # below will be uncommented once we start setting up unit tests
+    #  - name: Install Dependencies
+    #    run: |
+    #      python -m pip install --upgrade pip
+    #      pip install -r requirements.txt
       - name: Verify Env
         run: |
           python --version
