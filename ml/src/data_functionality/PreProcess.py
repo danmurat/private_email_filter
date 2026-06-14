@@ -3,7 +3,9 @@ import re
 
 import numpy as np
 import pandas as pd
+import src.util as util
 from numpy.typing import NDArray
+from scipy.sparse import spmatrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 """
@@ -107,8 +109,20 @@ class PreProcess:
         tfidf_train = tfidf_vec.fit_transform(train_text)
         tfidf_test = tfidf_vec.transform(test_text)
 
+        # so we can call later for single email processing
+        util.save_model_pickle(tfidf_vec, "tfidf")
+
         self.v_train_text = tfidf_train
         self.v_test_text = tfidf_test
+
+    def preprocess_single_email_tfidf(self, email: pd.Series) -> spmatrix:
+        if email.size != 1:
+            raise ValueError(f"Your email: pd.Series must have 1 email only! You have {email.size}")
+
+        tfidf_model = util.load_model_pickle("tfidf")
+        pp_email = tfidf_model.transform(email)
+
+        return pp_email
 
     # RUN THIS SO VARIABLES GET ASSIGNED!
     def preprocess_bow(self) -> None:
@@ -146,23 +160,23 @@ class PreProcess:
 
         print("\npreprocessing complete!\n")
 
-    # for demo purposes
-    def preprocess_single_email(
-        self, mail_df: pd.DataFrame, indexedDict: dict[str, int]
+    """
+    Demo purposes initially, but also needed when we start deploying our application. Someone 
+    may paste their own email in, and we're going to need to transform that. (We will need
+    to store the indexed100.json file on server to allow the transformation).
+    """
+
+    def preprocess_single_email_bow(
+        self, mail_df: pd.DataFrame, indexed_dict: dict[str, int]
     ) -> NDArray[np.float64]:
 
-        # print("transforming text...")
+        print("transforming email...")
         transformed_data = self._transform_text(mail_df)
-
-        # word counts already set up (and we saved into a seperate file), so we can skip this
-
-        # print("tokenising text...")
-        tokenised = self.tokenise_text(transformed_data["text"], indexedDict)
-
-        # print("vectorising text...")
-        vector = self.vectorise_text(tokenised, len(indexedDict))
-
-        # print("complete!\n")
+        print("tokenising email...")
+        tokenised = self.tokenise_text(transformed_data["text"], indexed_dict)
+        print("vectorising email...")
+        vector = self.vectorise_text(tokenised, len(indexed_dict))
+        print("complete!\n")
 
         return vector
 
@@ -247,15 +261,10 @@ class PreProcess:
             r"(\s{1}s\s{1})"
         )  # any s with single space before and after
         common = re.compile(r"(\sa\s|\sand\s|\sthe\s|\sthat\s|\sof\s|\swith\s|\sas\s)")
-
         data["text"] = data["text"].str.replace(non_alphanumeric, " ", regex=True)
-
         data["text"] = data["text"].str.replace(numbers, "numbers", regex=True)
-
         data["text"] = data["text"].str.replace(whitespaces, " ", regex=True)
-
         data["text"] = data["text"].str.replace(rejoin_s, "s ", regex=True)
-
         data["text"] = data["text"].str.replace(common, "", regex=True)
 
         return data

@@ -55,8 +55,8 @@ def main() -> None:
     # pal_save()
 
     # re-running after restructuring project directories (pickle didn't like it).
-    # preprocess_and_save()
-    ts_svd_train_and_save()
+    #preprocess_and_save()
+    # ts_svd_train_and_save() THIS IS THE ONLY MODEL THAT ACTUALLY LOADS AS OF 14/06/2026
     print("\n\nModel setup done.\n")
 
 

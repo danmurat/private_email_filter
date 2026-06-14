@@ -1,6 +1,7 @@
 ml/models/
 ml/dataset/
 ml/notebooks/
+.venv/
 .artifacts/
 .idea/
 .vscode/

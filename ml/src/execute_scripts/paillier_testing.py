@@ -65,7 +65,9 @@ def test_model(model_name: str) -> None:
 
     spam_email_label = spam_email["label"].iloc[0]
 
-    spam_email_vector = p.preprocess_single_email(spam_email, indexed100_dict).flatten()
+    spam_email_vector = p.preprocess_single_email_bow(
+        spam_email, indexed100_dict
+    ).flatten()
 
     print("Generating paillier keys...")
     public_key, private_key = client.pal_gen_keys()

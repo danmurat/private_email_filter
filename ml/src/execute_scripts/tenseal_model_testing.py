@@ -1,10 +1,9 @@
-import tenseal as ts
-from tenseal import Context
-
 import src.client as client
 import src.util as util
+import tenseal as ts
 from src.data_functionality.PreProcess import PreProcess
 from src.TenSealModels import TenSealModels
+from tenseal import Context
 
 """
 Any random testing needed is done in here.
@@ -79,7 +78,9 @@ def test_enc_svm() -> None:
     # print(f"email label = {spam_email_label}")
     # print("\n", spam_email["text"].iloc[0])
 
-    spam_email_vector = p.preprocess_single_email(spam_email, indexed100_dict).flatten()
+    spam_email_vector = p.preprocess_single_email_bow(
+        spam_email, indexed100_dict
+    ).flatten()
     # print("\n", spam_email_vector[:30])
 
     print("encrypting email...")

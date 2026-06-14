@@ -1,10 +1,12 @@
-concrete_python
+concrete-python
+concrete-ml
 fastapi
 matplotlib
 numpy
 pandas
 phe
 Requests
-scikit_learn
+scikit-learn
 tenseal
 torch
+pytest

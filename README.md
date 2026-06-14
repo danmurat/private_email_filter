@@ -46,4 +46,4 @@ Preprocessing is handled in the `\data_functionality` folder.
 
 If you wish to download and run, you just need `python3` installed (this project used `python3.11`, but any should work). The dataset is not included in the git repo (too big), so you'd need to find your own and link it to the project. This means linking the pre-processing steps to your new data (it assumes your using json), and running the required scripts to train and save your models. These are in `\execute_scripts`, and each have their own 'functionality' with respect to the project. Running `model_setup.py` is most important here.
 
-Download the required packages from pip (as your code throws errors). Not sure if there's a way to automatically install them all before running (prob is, not interested in doing that now).
+Download the required packages from pip (as your code throws errors). Not sure if there's a way to automatically install them all before running (prob is, not interested in doing that now). Recommend you use .venv environment for this. (mine is set up in root `/` for now).
