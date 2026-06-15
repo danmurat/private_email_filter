@@ -1,12 +1,12 @@
 concrete_python==2.10.0
 fastapi==0.137.1
 matplotlib==3.7.0
-numpy==2.4.6
+numpy==1.26.4
 pandas==2.0.3
 phe==1.5.0
 pytest==9.1.0
 Requests==2.34.2
-scikit_learn==1.9.0
+scikit_learn==1.5.0
 scipy==1.17.1
 tenseal==0.3.16
 torch==2.3.1
