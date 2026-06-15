@@ -3,19 +3,16 @@ import src.utils.util as util
 import tenseal as ts
 from src.data_functionality.PreProcess import PreProcess
 from src.TenSealModels import TenSealModels
-from src.utils.constants import (
-    MODEL_DATA_PATH,
-    REDUCED_MODEL_DATA_PATH,
-    TS_SVM_MODEL_PATH,
-)
+import src.utils.constants as c
+
 from tenseal import Context
 
 """
 Any random testing needed is done in here.
 """
 
-model_data = util.load_model_pickle(MODEL_DATA_PATH)
-reduced_model_data = util.load_model_pickle(REDUCED_MODEL_DATA_PATH)
+model_data = util.load_model_pickle(c.MODEL_DATA_PATH)
+reduced_model_data = util.load_model_pickle(c.REDUCED_MODEL_DATA_PATH)
 
 X_train, y_train, X_test, y_test = model_data.get_all_data()
 reduced_X_train, reduced_X_test = reduced_model_data.get_all_data()
@@ -66,7 +63,7 @@ def main() -> None:
 # first guess is that w/b should probably be encrypted too?
 def test_enc_svm() -> None:
     print("loading ts svm...")
-    svm = util.load_model_pickle(TS_SVM_MODEL_PATH)
+    svm = util.load_model_pickle(c.TS_PLAIN_PATH + c.TS_SVM)
     print("model loaded.")
 
     p = PreProcess()  # just for pre-processing single email
