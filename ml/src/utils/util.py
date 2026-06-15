@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import src.utils.constants as c
 import torch
 from sklearn.decomposition import PCA, TruncatedSVD
 
@@ -70,15 +71,7 @@ def svd_data(X_train, X_test, n) -> tuple:
 # incase we ever need to run again/change params
 def train_pca() -> None:
     pca = PCA(n_components=200)
-    save_model_pickle(pca, "pca")
-
-
-def model_data_path() -> str:
-    return "preprocessed_data/model_data"
-
-
-def reduced_model_data_path() -> str:
-    return "preprocessed_data/reduced_model_data"
+    save_model_pickle(pca, c.PCA_MODEL_KEY)
 
 
 def load_single_spam_email_df_test(id: int) -> pd.DataFrame:
@@ -140,8 +133,8 @@ def randomise(n: int, X, y) -> tuple:
 
 
 def load_test_data() -> tuple:
-    model_data = load_model_pickle(model_data_path())
-    reduced_model_data = load_model_pickle(reduced_model_data_path())
+    model_data = load_model_pickle(c.MODEL_DATA_PATH)
+    reduced_model_data = load_model_pickle(c.REDUCED_MODEL_DATA_PATH)
 
     X_test = model_data.get_X_test()  # MAKE SURE TO NOT INCLUDE THESE WHEN TESTING, BY ACCIDENT!!! (yes i spent the past hr debugging this)
     y_test = model_data.get_y_test()

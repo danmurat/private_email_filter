@@ -2,11 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA, TruncatedSVD
 from numpy.typing import NDArray
-import src.util as util
+import src.utils.util as util
 from src.ZamaModels import ZamaModels
+from src.utils.constants import MODEL_DATA_PATH, REDUCED_MODEL_DATA_PATH
 
-model_data = util.load_model_pickle(util.model_data_path())
-red_model_data = util.load_model_pickle(util.reduced_model_data_path())
+model_data = util.load_model_pickle(MODEL_DATA_PATH)
+red_model_data = util.load_model_pickle(REDUCED_MODEL_DATA_PATH)
 X_train, y_train, X_test, y_test = model_data.get_all_data()
 red_X_train, red_X_test = red_model_data.get_all_data()
 

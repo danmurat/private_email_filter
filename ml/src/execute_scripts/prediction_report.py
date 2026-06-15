@@ -1,12 +1,13 @@
 import numpy as np
 from sklearn.metrics import classification_report
 
-import src.util as util
+import src.utils.util as util
 from src.TenSealModels import TenSealModels
+import src.utils.constants as c
 
 # DATA
-model_data = util.load_model_pickle(util.model_data_path())
-reduced_model_data = util.load_model_pickle(util.reduced_model_data_path())
+model_data = util.load_model_pickle(c.MODEL_DATA_PATH)
+reduced_model_data = util.load_model_pickle(c.REDUCED_MODEL_DATA_PATH)
 
 X_test = model_data.get_X_test()
 y_test = model_data.get_y_test()
@@ -26,23 +27,23 @@ Seperately evaluating predictive performance of all plaintext models.
 
 
 def main() -> None:
-    zama_report("svd_log")
-    zama_report("svd_svm")
-    ts_report("svd_log")
-    ts_report("svd_svm")
+    zama_report(c.ZAMA_PLAIN_PATH, c.ZAMA_SVD_LOG)
+    zama_report(c.ZAMA_PLAIN_PATH, c.ZAMA_SVD_SVM)
+    ts_report(c.TS_PLAIN_PATH, c.TS_SVD_LOG)
+    ts_report(c.TS_PLAIN_PATH, c.TS_SVD_SVM)
 
 
-def zama_report(model_name: str) -> None:
-    model = util.load_model_pickle(f"zama_plain_models/{model_name}")
+def zama_report(model_path: str, model_name: str) -> None:
+    model = util.load_model_pickle(model_path + model_name)
     y_pred = model.predict(red_X_test) if _is_svd(model_name) else model.predict(X_test)
 
     print(f"\nZAMA {model_name} REPORT:\n")
     print(classification_report(y_test, y_pred, digits=4))
 
 
-def ts_report(model_name: str) -> None:
+def ts_report(model_path: str, model_name: str) -> None:
     t = TenSealModels()  # to run the accuracy tests
-    model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+    model = util.load_model_pickle(model_path + model_name)
 
     is_log = model_name[0] == "l" or (
         len(model_name) > 3 and model_name[4] == "l"

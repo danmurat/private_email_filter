@@ -3,10 +3,10 @@ import time
 import tracemalloc
 
 import numpy as np
-import tenseal as ts
-
 import src.client as client
-import src.util as util
+import src.utils.util as util
+import tenseal as ts
+import src.utils.constants as c
 from src.ZamaModels import ZamaModels
 
 z = ZamaModels()  # just to use the loadModels() method
@@ -34,6 +34,7 @@ def main() -> None:
     # test_model_accuracy("ts_svm", True)
     # print("\nTESTING PLAIN\n")
     # test_model_accuracy("ts_svm", False)
+    
     """
     Re-running MULTIPLE times continuously yields the same correct counters for both. Safe to say that the encrypted models
     have the same accuracy as plain, so we'll use the plaintext accuracies on the whole test set when talking about the
@@ -60,9 +61,9 @@ def test_model_latency(model_name: str) -> None:
         if model_name[0] == "z":
             inference_times = zama_benchmark_model(model_name[5:])  # zama_log -> log
         elif model_name[0] == "t":
-            inference_times = ts_benchmark_model(model_name[3:])
+            inference_times = ts_benchmark_model(c.TS_PLAIN_PATH, model_name[3:])
         elif model_name[0] == "p":
-            inference_times = pal_benchmark_model(model_name[4:])
+            inference_times = pal_benchmark_model(c.PAL_PLAIN_PATH, model_name[4:])
         else:
             raise ValueError(
                 f"model_name `{model_name}` should begin with `zama_` or `ts_`"
@@ -72,9 +73,9 @@ def test_model_latency(model_name: str) -> None:
         model_name = model_name[6:]
         print(model_name)
         if model_name[0] == "z":
-            inference_times = zama_bench_plain_inference(model_name[5:])
+            inference_times = zama_bench_plain_inference(c.ZAMA_PLAIN_PATH, model_name[5:])
         elif model_name[0] == "t":
-            inference_times = ts_bench_plain_inference(model_name[3:])
+            inference_times = ts_bench_plain_inference(c.TS_PLAIN_PATH, model_name[3:])
 
     print(inference_times)
 
@@ -144,9 +145,9 @@ def test_enc_dec_times(model_name: str) -> None:
     if model_name[0] == "z":
         enc_times, dec_times = zama_benchmark_enc_dec(model_name[5:])  # zama_log -> log
     elif model_name[0] == "t":
-        enc_times, dec_times = ts_benchmark_enc_dec(model_name[3:])
+        enc_times, dec_times = ts_benchmark_enc_dec(c.TS_PLAIN_PATH, model_name[3:])
     elif model_name[0] == "p":
-        enc_times, dec_times = pal_benchmark_enc_dec(model_name[4:])
+        enc_times, dec_times = pal_benchmark_enc_dec(c.PAL_PLAIN_PATH, model_name[4:])
     else:
         raise ValueError(
             f"model_name `{model_name}` should begin with `zama_` or `ts_`"
@@ -176,17 +177,17 @@ def test_enc_dec_times(model_name: str) -> None:
 # just use to make sure encrypted predictions are equivilant to plaintext predictions (they are)
 def test_model_accuracy(model_name: str, enc: bool) -> None:
     if model_name[0] == "z" and enc:
-        zama_test_accuracy(model_name[5:])  # zama_log -> log
+        zama_test_accuracy(c.ZAMA_PLAIN_PATH, model_name[5:])  # zama_log -> log
     elif model_name[0] == "z" and not enc:
-        zama_test_plain_accuracy(model_name[5:])  # zama_log -> log
+        zama_test_plain_accuracy(c.ZAMA_PLAIN_PATH, model_name[5:])  # zama_log -> log
     elif model_name[0] == "t" and enc:
-        ts_test_accuracy(model_name[3:])
+        ts_test_accuracy(c.TS_PLAIN_PATH, model_name[3:])
     elif model_name[0] == "t" and not enc:
-        ts_test_plain_accuracy(model_name[3:])
+        ts_test_plain_accuracy(c.TS_PLAIN_PATH, model_name[3:])
     elif model_name[0] == "p" and enc:
-        pal_test_accuracy(model_name[4:])
+        pal_test_accuracy(c.PAL_PLAIN_PATH, model_name[4:])
     elif model_name[0] == "p" and not enc:
-        pal_test_plain_accuracy(model_name[4:])
+        pal_test_plain_accuracy(c.PAL_PLAIN_PATH, model_name[4:])
     else:
         raise ValueError(
             f"model_name `{model_name}` should begin with `zama_` or `ts_`"
@@ -195,8 +196,8 @@ def test_model_accuracy(model_name: str, enc: bool) -> None:
 
 # potentially return accuracy values (instead of just printing?). Don't see why I need to do this? Just show once
 # how accurate it is, and save it on paper...
-def ts_test_accuracy(model_name: str) -> None:
-    model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+def ts_test_accuracy(model_path: str,model_name: str) -> None:
+    model = util.load_model_pickle(model_path + model_name)
     ctx_eval = (
         client.setup_ts_params()
     )  # remember to change depending on what the model is (when we test log)
@@ -223,8 +224,8 @@ def ts_test_accuracy(model_name: str) -> None:
     print(f"\nTENSEAL {model_name} | CORRECT={correct_count} | HE ACCURACY={accuracy}%")
 
 
-def pal_test_accuracy(model_name: str) -> None:
-    pal_model = util.load_model_pickle(f"pal_plain_models/{model_name}")
+def pal_test_accuracy(model_path: str, model_name: str) -> None:
+    pal_model = util.load_model_pickle(model_path + model_name)
     is_log = True
     if (
         model_name == "svm" or model_name == "pca_svm"
@@ -286,8 +287,8 @@ def _pal_accuracy_test_loop(model, private_key, enc_x, y, is_log) -> float:
 
 
 # call incase the need to debug
-def ts_test_plain_accuracy(model_name: str) -> None:
-    model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+def ts_test_plain_accuracy(model_path: str, model_name: str) -> None:
+    model = util.load_model_pickle(model_path + model_name)
 
     is_log = True
     if model_name == "svm":  # potentially make more robust. What if it's neither?
@@ -442,8 +443,8 @@ def _zama_enc_dec_timers(model, x, cli, eval_keys, i) -> tuple:
 
 
 # remove svm name after once we have log set up too (just to remind us we're solely testing svm)
-def ts_benchmark_model(model_name: str) -> list:
-    ts_model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+def ts_benchmark_model(model_path: str, model_name: str) -> list:
+    ts_model = util.load_model_pickle(model_path + model_name)
 
     x, ctx = (
         (red_X_rand, client.setup_ts_params_pca())
@@ -457,13 +458,13 @@ def ts_benchmark_model(model_name: str) -> list:
     return inference_times
 
 
-def ts_benchmark_enc_dec(model_name: str) -> tuple:
+def ts_benchmark_enc_dec(model_path: str, model_name: str) -> tuple:
     x, ctx = (
         (red_X_rand, client.setup_ts_params_pca())
         if _is_svd_model(model_name)
         else (X_rand, client.setup_ts_params())
     )
-    model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+    model = util.load_model_pickle(model_path + model_name)
 
     enc_times = []
     dec_times = []
@@ -494,8 +495,8 @@ def _ts_enc_dec_timers(model, x, ctx_eval, i) -> tuple:
     return enc_time, dec_time
 
 
-def pal_benchmark_model(model_name: str) -> list:
-    pal_model = util.load_model_pickle(f"pal_plain_models/{model_name}")
+def pal_benchmark_model(model_path: str, model_name: str) -> list:
+    pal_model = util.load_model_pickle(model_path + model_name)
     x = red_X_rand if _is_svd_model(model_name) else X_rand
 
     public_key, private_key = client.pal_gen_keys()
@@ -509,9 +510,9 @@ def pal_benchmark_model(model_name: str) -> list:
     return inference_times
 
 
-def pal_benchmark_enc_dec(model_name: str) -> tuple[list[float], list[float]]:
+def pal_benchmark_enc_dec(model_path: str, model_name: str) -> tuple[list[float], list[float]]:
     x = red_X_rand if _is_svd_model(model_name) else X_rand
-    model = util.load_model_pickle(f"pal_plain_models/{model_name}")
+    model = util.load_model_pickle(model_path + model_name)
 
     public_key, private_key = client.pal_gen_keys()
 
@@ -544,9 +545,9 @@ def _pal_enc_dec_timers(model, x, pub_key, priv_key, i) -> tuple[float, float]:
     return enc_time, dec_time
 
 
-def zama_bench_plain_inference(model_name: str) -> list:
+def zama_bench_plain_inference(model_path: str, model_name: str) -> list:
     inference_times = []
-    model = util.load_model_pickle(f"zama_plain_models/{model_name}")
+    model = util.load_model_pickle(model_path + model_name)
 
     x = red_X_rand if _is_svd_model(model_name) else X_rand
 
@@ -557,9 +558,9 @@ def zama_bench_plain_inference(model_name: str) -> list:
     return inference_times[3:]  # dropping first 3 elements
 
 
-def ts_bench_plain_inference(model_name: str) -> list:
+def ts_bench_plain_inference(model_path: str, model_name: str) -> list:
     inference_times = []
-    model = util.load_model_pickle(f"ts_plain_models/{model_name}")
+    model = util.load_model_pickle(model_path + model_name)
 
     x = red_X_rand if _is_svd_model(model_name) else X_rand
 

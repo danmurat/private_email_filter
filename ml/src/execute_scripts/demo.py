@@ -2,7 +2,7 @@ import sys
 import time
 
 import numpy as np
-import src.util as util
+import src.utils.util as util
 
 """
 leave errors, since the project changed a lot since my presentation.

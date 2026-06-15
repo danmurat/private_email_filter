@@ -2,11 +2,12 @@ import time
 
 import phe as paillier
 import src.client as client
-import src.util as util
+import src.utils.util as util
 from src.data_functionality.PreProcess import PreProcess
+import src.utils.constants as c
 
-model_data = util.load_model_pickle(util.model_data_path())
-reduced_model_data = util.load_model_pickle(util.reduced_model_data_path())
+model_data = util.load_model_pickle(c.MODEL_DATA_PATH)
+reduced_model_data = util.load_model_pickle(c.REDUCED_MODEL_DATA_PATH)
 
 X_train, y_train, X_test, y_test = model_data.get_all_data()
 reduced_X_train, reduced_X_test = reduced_model_data.get_all_data()
@@ -14,7 +15,7 @@ reduced_X_train, reduced_X_test = reduced_model_data.get_all_data()
 
 def main() -> None:
     # test_encryption_time()
-    test_model("svm")
+    test_model(c.PAL_PLAIN_PATH, c.PAL_SVM)
 
 
 """
@@ -54,8 +55,8 @@ def test_encryption_time() -> None:
     print(f"encrypting vector of length {len(vec)} took {end2 - start2} seconds")
 
 
-def test_model(model_name: str) -> None:
-    pal_model = util.load_model_pickle(f"pal_plain_models/{model_name}")
+def test_model(model_path: str, model_name: str) -> None:
+    pal_model = util.load_model_pickle(model_path + model_name)
     print(len(pal_model.w))
 
     p = PreProcess()

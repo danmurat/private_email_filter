@@ -1,4 +1,5 @@
-import src.util as util
+import src.utils.constants as c
+import src.utils.util as util
 from src.data_functionality.ModelData import ModelData
 from src.data_functionality.PreProcess import PreProcess
 from src.data_functionality.ReducedModelData import ReducedModelData
@@ -11,6 +12,12 @@ from src.ZamaModels import ZamaModels
 """
 This file intends to actually train and save any HE compatable ML models,
 so that we can use and test (in demo or benchmark.py).
+
+TODO:
+this file is a bit gross. We have many functions training, saving or loading -
+these can be much more 'injected'. So we can inject the model we want to train, inject
+the data (complete, or reduced), etc.
+This could do with a big cleanup.
 """
 
 
@@ -60,8 +67,8 @@ def main() -> None:
     print("\n\nModel setup done.\n")
 
 
-model_data = util.load_model_pickle(util.model_data_path())
-reduced_model_data = util.load_model_pickle(util.reduced_model_data_path())
+model_data = util.load_model_pickle(c.MODEL_DATA_PATH)
+reduced_model_data = util.load_model_pickle(c.REDUCED_MODEL_DATA_PATH)
 X_train, y_train, X_test, y_test = model_data.get_all_data()
 X_train = X_train.toarray()  # sparse can't get passed to models
 X_test = X_test.toarray()
@@ -90,8 +97,8 @@ def preprocess_and_save() -> None:
 
     reduced_model_data = ReducedModelData(red_X_train, red_X_test)
 
-    util.save_model_pickle(model_data, util.model_data_path())
-    util.save_model_pickle(reduced_model_data, util.reduced_model_data_path())
+    util.save_model_pickle(model_data, c.MODEL_DATA_PATH)
+    util.save_model_pickle(reduced_model_data, c.REDUCED_MODEL_DATA_PATH)
 
     print("data saved! (In pickle_objects/preprocessed_data/)")
 
@@ -141,9 +148,9 @@ def zama_plain_train_and_save() -> None:
     z.test_plain_accuracy(log, X_test, y_test)
 
     print("saving model weights...")
-    util.save_model_pickle(svm, "zama_plain_models/svm")
+    util.save_model_pickle(svm, c.ZAMA_PLAIN_PATH + c.ZAMA_SVM)
     print("plain zama svm saved!")
-    util.save_model_pickle(log, "zama_plain_models/log")
+    util.save_model_pickle(log, c.ZAMA_PLAIN_PATH + c.ZAMA_LOG)
     print("plain zama logistic regression saved!\n")
 
 
@@ -170,47 +177,47 @@ def zama_train_save_test_with_svd() -> None:
     z = ZamaModels()
 
     print("training pca'd svm model...")
-    svm = z.train_svm(red_X_train, y_train)
+    svd_svm = z.train_svm(red_X_train, y_train)
     util.save_model_pickle(
-        svm, "zama_plain_models/svd_svm"
+        svd_svm, c.ZAMA_PLAIN_PATH + c.ZAMA_SVD_SVM
     )  # save plaintext version to quickly test later
-    z.svd_compile_model(svm, red_X_train)
+    z.svd_compile_model(svd_svm, red_X_train)
 
     print("training complete!\n")
 
     print("training pca'd logistic regresssion model...")
-    log = z.train_logistic(red_X_train, y_train)
-    util.save_model_pickle(log, "zama_plain_models/svd_log")
-    z.svd_compile_model(log, red_X_train)
+    svd_log = z.train_logistic(red_X_train, y_train)
+    util.save_model_pickle(svd_log, c.ZAMA_PLAIN_PATH + c.ZAMA_SVD_LOG)
+    z.svd_compile_model(svd_log, red_X_train)
     print("training complete!\n")
 
     print("saving model weights...")
-    z.save_model(svm, "svd_svm")
+    z.save_model(svd_svm, c.ZAMA_SVD_SVM)
     print("svm saved!")
-    z.save_model(log, "svd_log")
+    z.save_model(svd_log, c.ZAMA_SVD_LOG)
     print("logistic regression saved!\n")
 
-    svd_load_plain_zama_and_test("svd_svm")
-    svd_load_plain_zama_and_test("svd_log")
+    svd_load_plain_zama_and_test(c.ZAMA_PLAIN_PATH, c.ZAMA_SVD_SVM)
+    svd_load_plain_zama_and_test(c.ZAMA_PLAIN_PATH, c.ZAMA_SVD_LOG)
 
 
-def load_plain_zama_model_and_test(name: str) -> None:
+def load_plain_zama_model_and_test(model_path: str, model_name: str) -> None:
     z = ZamaModels()
 
     print("loading model...")
-    model = util.load_model_pickle(name)
-    print(f"{name} model loaded!\n")
+    model = util.load_model_pickle(model_path + model_name)
+    print(f"{model_name} model loaded!\n")
 
     print("testing plaintext accuracy...")
     z.test_plain_accuracy(model, X_test, y_test)
 
 
-def svd_load_plain_zama_and_test(name: str) -> None:
+def svd_load_plain_zama_and_test(model_path: str, model_name: str) -> None:
     z = ZamaModels()
 
     print("loading model...")
-    model = util.load_model_pickle(f"zama_plain_models/{name}")
-    print(f"{name} model loaded!\n")
+    model = util.load_model_pickle(model_path + model_name)
+    print(f"{model_name} model loaded!\n")
 
     print("testing plaintext accuracy...")
     z.pca_test_plain_accuracy(model, red_X_test, y_test)
@@ -242,7 +249,7 @@ def ts_train_and_save() -> None:
     # ts.svmAccuracy(ts_pre_svm, t_X_test, t_y_test)
 
     print("Saving models with pickle...")
-    util.save_model_pickle(ts_log, "ts_plain_models/log")
+    util.save_model_pickle(ts_log, c.TS_PLAIN_PATH + c.TS_LOG)
     # util.saveModelPickle(ts_svm, "ts_plain_models/svm")
     print("Tenseal models saved.")
 
@@ -266,8 +273,8 @@ def ts_svd_train_and_save() -> None:
     ts.svm_predictions(ts_pre_svd_svm, t_red_X_test, t_y_test)
 
     print("Saving models with pickle...")
-    util.save_model_pickle(ts_svd_log, "ts_plain_models/svd_log")
-    util.save_model_pickle(ts_svd_svm, "ts_plain_models/svd_svm")
+    util.save_model_pickle(ts_svd_log, c.TS_PLAIN_PATH + c.TS_SVD_LOG)
+    util.save_model_pickle(ts_svd_svm, c.TS_PLAIN_PATH + c.TS_SVD_SVM)
     print("Tenseal models saved.")
 
 
@@ -276,9 +283,9 @@ def pal_save() -> None:
     # SAVING JUST REDUCED DATA VERSIONS
     print("Loading ts compat models for paillier...")
     # ts_log = util.loadModelPickle("ts_plain_models/log")
-    ts_svd_log = util.load_model_pickle("ts_plain_models/svd_log")
+    ts_svd_log = util.load_model_pickle(c.TS_PLAIN_PATH + c.TS_SVD_LOG)
     # ts_svm = util.loadModelPickle("ts_plain_models/svm")
-    ts_svd_svm = util.load_model_pickle("ts_plain_models/svd_svm")
+    ts_svd_svm = util.load_model_pickle(c.TS_PLAIN_PATH + c.TS_SVD_SVM)
     print("Loaded.")
 
     # confirm that w's are appropriate lengths
@@ -294,16 +301,16 @@ def pal_save() -> None:
 
     print("Saving paillier models...")
     # util.saveModelPickle(pal_log, "pal_plain_models/log")
-    util.save_model_pickle(pal_svd_log, "pal_plain_models/svd_log")
+    util.save_model_pickle(pal_svd_log, c.PAL_PLAIN_PATH + c.PAL_SVD_LOG)
     # util.saveModelPickle(pal_svm, "pal_plain_models/svm")
-    util.save_model_pickle(pal_svd_svm, "pal_plain_models/svd_svm")
+    util.save_model_pickle(pal_svd_svm, c.PAL_PLAIN_PATH + c.PAL_SVD_SVM)
     print("Models saved.")
 
 
 # added EncSVM to detach.numpy on parameter selection. So Paillier should automatically work for both ts_log and svm
 def resave_ts_svm() -> None:
-    ts_pre_svm = util.load_model_pickle("ts_plain_models/svm")
-    ts_pre_svd_svm = util.load_model_pickle("ts_plain_models/svd_svm")
+    ts_pre_svm = util.load_model_pickle(c.TS_PLAIN_PATH + c.TS_SVM)
+    ts_pre_svd_svm = util.load_model_pickle(c.TS_PLAIN_PATH + c.TS_SVD_SVM)
 
     print(type(ts_pre_svd_svm.w))
     print(ts_pre_svd_svm.w)

@@ -2,7 +2,7 @@ import sys
 
 import requests
 import src.client as client
-import src.util as util
+import src.utils.util as util
 import tenseal as ts
 
 base_url = "http://127.0.0.1:8000/"

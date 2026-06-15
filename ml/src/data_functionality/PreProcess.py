@@ -3,13 +3,17 @@ import re
 
 import numpy as np
 import pandas as pd
-import src.util as util
+import src.utils.util as util
+from src.utils.constants import TFIDF_MODEL_KEY
 from numpy.typing import NDArray
 from scipy.sparse import spmatrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 """
-Sets up our given dataset to be compatable with training classifier ML models
+Sets up our given dataset to be compatable with training classifier ML models.
+Initially most of this file was handling our own implementation of Bag-of-words model.
+Turns out that the tfidf model from sklearn gives us slightly better results.
+Code from BoW remains for flexibility, but tfidf is the main one we'll use for deployment.
 """
 
 
@@ -110,17 +114,16 @@ class PreProcess:
         tfidf_test = tfidf_vec.transform(test_text)
 
         # so we can call later for single email processing
-        util.save_model_pickle(tfidf_vec, "tfidf")
+        util.save_model_pickle(tfidf_vec, TFIDF_MODEL_KEY)
 
         self.v_train_text = tfidf_train
         self.v_test_text = tfidf_test
 
-    def preprocess_single_email_tfidf(self, email: pd.Series) -> spmatrix:
+    def preprocess_single_email_tfidf(self, email: pd.Series, model: TfidfVectorizer) -> spmatrix:
         if email.size != 1:
             raise ValueError(f"Your email: pd.Series must have 1 email only! You have {email.size}")
-
-        tfidf_model = util.load_model_pickle("tfidf")
-        pp_email = tfidf_model.transform(email)
+        
+        pp_email = model.transform(email)
 
         return pp_email
 

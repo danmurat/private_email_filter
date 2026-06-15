@@ -1,8 +1,8 @@
-from unittest.mock import MagicMock, patch
-from src.data_functionality.PreProcess import PreProcess
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
+from src.data_functionality.PreProcess import PreProcess
 
 pp = PreProcess()
 
@@ -24,16 +24,19 @@ def test_preprocess_single_email_error(bad_input):
         ValueError,
         match=f"Your email: pd.Series must have 1 email only! You have {bad_input.size}",
     ):
-        pp.preprocess_single_email_tfidf(bad_input)
+        pp.preprocess_single_email_tfidf(bad_input, _fake_tfidf())
 
 
-@patch("src.util.load_model_pickle")
-def test_preprocess_single_email_success(mock_load_pickle):
-    fake_tfidf = MagicMock()
-    fake_tfidf.transform.return_value = "fake_sparse_matrix"
-    mock_load_pickle.return_value = fake_tfidf
-
+def test_preprocess_single_email_success():
     good_input = pd.Series(["some email"])
-    result = pp.preprocess_single_email_tfidf(good_input)
+    result = pp.preprocess_single_email_tfidf(good_input, _fake_tfidf())
 
     assert result == "fake_sparse_matrix"
+
+
+# don't want to be loading a real model (in CI pipeline). Just test the logic works.
+def _fake_tfidf() -> MagicMock:
+    fake_tfidf = MagicMock()
+    fake_tfidf.transform.return_value = "fake_sparse_matrix"
+
+    return fake_tfidf
