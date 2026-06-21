@@ -1,6 +1,7 @@
 ml/models/
 ml/dataset/
 ml/notebooks/
+clienttest/data/
 .venv/
 .artifacts/
 .idea/
@@ -10,6 +11,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.antigravityignore
 indexed100.json
 pyproject.toml
 screeplot_large.png

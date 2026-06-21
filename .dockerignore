@@ -1,0 +1,16 @@
+**/ml/dataset/
+**/ml/models/
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+*.json
+*.toml
+*.pkl
+.git
+.idea/
+.ruff_cache/
+.vscode/
+.venv/
+.artifacts/

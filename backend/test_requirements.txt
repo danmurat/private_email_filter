@@ -1,0 +1,7 @@
+cloudpickle==3.1.2
+tenseal==0.3.16
+pytest==9.1.0
+fastapi==0.137.2
+uvicorn==0.45.0
+python-multipart==0.0.26
+numpy==1.26.4

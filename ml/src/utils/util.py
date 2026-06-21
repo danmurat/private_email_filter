@@ -1,5 +1,6 @@
 import json
 import pickle
+import cloudpickle
 import random
 from typing import Any
 
@@ -27,11 +28,13 @@ def save_model_pickle(model: Any, name: str) -> None:
     with open(f"models/pickle_objects/{name}.pkl", "wb") as file:
         pickle.dump(model, file)
 
-
 def load_model_pickle(name: str) -> Any:
     with open(f"models/pickle_objects/{name}.pkl", "rb") as file:
         return pickle.load(file)
 
+def save_cloud_model(model: Any, name: str) -> None:
+    with open(f"models/cloud/{name}.pkl", "wb") as file:
+        cloudpickle.dump(model, file)
 
 # the tenseal and pailier models utilise torch tensors for the gradient descent algs
 def convert_to_torch_tensors(

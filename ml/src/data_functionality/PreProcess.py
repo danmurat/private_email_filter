@@ -4,7 +4,7 @@ import re
 import numpy as np
 import pandas as pd
 import src.utils.util as util
-from src.utils.constants import TFIDF_MODEL_KEY
+import src.utils.constants as c
 from numpy.typing import NDArray
 from scipy.sparse import spmatrix
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -114,7 +114,7 @@ class PreProcess:
         tfidf_test = tfidf_vec.transform(test_text)
 
         # so we can call later for single email processing
-        util.save_model_pickle(tfidf_vec, TFIDF_MODEL_KEY)
+        util.save_model_pickle(tfidf_vec, c.TFIDF_MODEL_KEY)
 
         self.v_train_text = tfidf_train
         self.v_test_text = tfidf_test

@@ -1,14 +1,14 @@
 import sys
 
 import requests
-import src.client as client
-import src.utils.util as util
+import client_code
+import util
 import tenseal as ts
 
-base_url = "http://127.0.0.1:8000/"
-X_test, red_X_test, y_test = util.load_test_data()
+base_url = "http://0.0.0.0:8000/"
+red_X_test = util.load_red_test_data()
 # TESTING ON SVD DATA
-x_i, y, index = util.randomise(1, red_X_test, y_test)
+x_i, index = util.randomise(1, red_X_test)
 
 
 def main() -> None:
@@ -19,7 +19,7 @@ def main() -> None:
         if choice == "n":
             sys.exit()
 
-        data, ctx = ts_data_to_send()
+        data, ctx = _ts_data_to_send()
 
         choice = input("\nSend for classification? (y): \n")
         if choice == "n":
@@ -38,7 +38,7 @@ def main() -> None:
                 sys.exit()
 
             prelim_result = enc_prelim_result.decrypt()
-            result = client.ts_client_finish_prediction_svm(prelim_result)
+            result = client_code.ts_client_finish_prediction_svm(prelim_result)
             if result == 0:
                 print("HAM")
             else:
@@ -50,9 +50,9 @@ def main() -> None:
         print(f"error: {err}")
 
 
-def ts_data_to_send() -> tuple:
-    ctx = client.setup_ts_params()
-    enc_x_i = client.ts_encrypt_x_i(x_i[0], ctx)
+def _ts_data_to_send() -> tuple:
+    ctx = client_code.setup_ts_params()
+    enc_x_i = client_code.ts_encrypt_x_i(x_i[0], ctx)
 
     enc_email_bytes = enc_x_i.serialize()
 
