@@ -1,7 +1,9 @@
 TFIDF_MODEL_KEY = "tfidf"
 PCA_MODEL_KEY = "pca"
-MODEL_DATA_PATH = "preprocessed_data/model_data"
-REDUCED_MODEL_DATA_PATH = "preprocessed_data/reduced_model_data"
+MODEL_DATA_KEY = "model_data"
+REDUCED_MODEL_DATA_KEY = "reduced_model_data"
+MODEL_DATA_PATH = "preprocessed_data/" + MODEL_DATA_KEY
+REDUCED_MODEL_DATA_PATH = "preprocessed_data/" + REDUCED_MODEL_DATA_KEY
 TS_PLAIN_PATH = "ts_plain_models/"
 TS_LOG = "log"
 TS_SVM = "svm"

@@ -36,6 +36,10 @@ jobs:
           cd ml
           python -m pytest
 
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 -t priv-mail-server backend
+
 
   ai-review:
     needs: build-and-test # only runs if build-and-test is successful

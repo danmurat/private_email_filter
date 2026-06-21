@@ -1,0 +1,15 @@
+Ignore models/ and dataset/ + all the hidden paths like .venv, .vscode, etc..
+(docker doesn't need this).
+Dockerfile includes instructions on how to build this project.
+When trying to run the server from docker, we need to pass the local paths to
+our models (also data if we want to train new models. Not important right now tho).
+
+# assuming you run from /backend
+docker build --platform linux/amd64 -t priv-mail-server .
+# important to open up port 8000 in the container
+docker run --platform linux/amd64 -p 8000:8000 priv-mail-server
+
+# if you build/run from root, add backend instead of the dot (.) (this is what we do in integrate.yml because github builds from root)
+
+# if you want to go inside the container's shell and do whatever, run below:
+docker exec -it <CONTAINER_ID_OR_NAME> /bin/bash

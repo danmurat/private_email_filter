@@ -1,12 +1,17 @@
 import src.utils.constants as c
 import src.utils.util as util
+import cloudpickle
 from src.data_functionality.ModelData import ModelData
-from src.data_functionality.PreProcess import PreProcess
 from src.data_functionality.ReducedModelData import ReducedModelData
+from src.data_functionality.PreProcess import PreProcess
+# so we can save these modules for cloudpickle
+import src.data_functionality.ModelData
+import src.data_functionality.ReducedModelData
 from src.paillier_compat_models.EncLinear import EncLinear
 from src.TenSealModels import TenSealModels
 from src.ts_compat_models.EncLR import EncLR
 from src.ts_compat_models.EncSVM import EncSVM
+import src.ts_compat_models.EncSVM # same thing applies here (as model data's)
 from src.ZamaModels import ZamaModels
 
 """
@@ -63,7 +68,7 @@ def main() -> None:
 
     # re-running after restructuring project directories (pickle didn't like it).
     #preprocess_and_save()
-    # ts_svd_train_and_save() THIS IS THE ONLY MODEL THAT ACTUALLY LOADS AS OF 14/06/2026
+    #ts_svd_train_and_save() # THIS IS THE ONLY MODEL THAT ACTUALLY LOADS AS OF 14/06/2026
     print("\n\nModel setup done.\n")
 
 
@@ -97,10 +102,13 @@ def preprocess_and_save() -> None:
 
     reduced_model_data = ReducedModelData(red_X_train, red_X_test)
 
-    util.save_model_pickle(model_data, c.MODEL_DATA_PATH)
-    util.save_model_pickle(reduced_model_data, c.REDUCED_MODEL_DATA_PATH)
+    cloudpickle.register_pickle_by_value(src.data_functionality.ModelData)
+    cloudpickle.register_pickle_by_value(src.data_functionality.ReducedModelData)
+    util.save_cloud_model(model_data, c.MODEL_DATA_KEY)
+    util.save_cloud_model(reduced_model_data, c.REDUCED_MODEL_DATA_KEY)
 
-    print("data saved! (In pickle_objects/preprocessed_data/)")
+    #print("data saved! (In pickle_objects/preprocessed_data/)")
+    print("data saved! (In models/cloud/)")
 
 
 def zama_train_and_save() -> None:
@@ -274,7 +282,9 @@ def ts_svd_train_and_save() -> None:
 
     print("Saving models with pickle...")
     util.save_model_pickle(ts_svd_log, c.TS_PLAIN_PATH + c.TS_SVD_LOG)
-    util.save_model_pickle(ts_svd_svm, c.TS_PLAIN_PATH + c.TS_SVD_SVM)
+    # saving svd log as cloud model!
+    cloudpickle.register_pickle_by_value(src.ts_compat_models.EncSVM)
+    util.save_cloud_model(ts_svd_svm, c.TS_SVD_SVM)
     print("Tenseal models saved.")
 
 
