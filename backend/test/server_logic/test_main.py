@@ -6,3 +6,4 @@ def test_load_cloud_model():
     model = load_cloud_model("svd_svm")
     assert model is not None
     assert hasattr(model, "enc_prelim_predict")
+

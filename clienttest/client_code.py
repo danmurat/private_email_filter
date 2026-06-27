@@ -73,7 +73,7 @@ def setup_ts_params() -> Context:
 
 # testing. We should be able to have lower values for this?? We go from dimensions=5000+ to 200
 # this is giving us ~4ms inference. We can't seem to go lower than 2^12 though?
-def setup_ts_params_pca() -> Context:
+def setup_lean_ts_params() -> Context:
     poly_mod_degree = (
         2**12
     )  # 2^12 = 4096 basic (must be pow 2) -- lower = more efficient

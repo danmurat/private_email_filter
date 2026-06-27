@@ -36,9 +36,30 @@ jobs:
           cd ml
           python -m pytest
 
-      - name: Build Docker image
+      - name: Build & boot server stack
+        run: docker compose -f backend/docker-compose.yml up --build -d
+
+      - name: Wait for server to be ready
         run: |
-          docker build --platform linux/amd64 -t priv-mail-server backend
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ || true)
+            if [ -n "$code" ] && [ "$code" != "000" ]; then
+              echo "server responding (HTTP $code)"; exit 0
+            fi
+            echo "waiting for server... ($i)"; sleep 2
+          done
+          echo "server did not become ready"
+          docker compose -f backend/docker-compose.yml logs
+          exit 1
+
+      - name: Run e2e network tests
+        run: |
+          cd backend
+          python -m pytest test/network/
+
+      - name: Tear down server stack
+        if: always()
+        run: docker compose -f backend/docker-compose.yml down
 
 
   ai-review:
