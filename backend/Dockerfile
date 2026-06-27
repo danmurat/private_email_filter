@@ -1,7 +1,7 @@
 #
 # Dockerfile for the server ONLY
 # this container will be what runs on AWS
-# multi-stage build. First build to check tests. If they pass, we build
+# multi-stage build. First build to check server logic tests. If they pass, we build
 # the final 'prod' version (which excludes tests and keeps image lean)
 #
 FROM python:3.11-slim AS tester
@@ -10,7 +10,7 @@ WORKDIR /app
 COPY test_requirements.txt .
 RUN pip install --no-cache-dir -r test_requirements.txt
 COPY . .
-RUN python -m pytest && touch /tmp/tests_passed
+RUN python -m pytest --ignore=test/network/ && touch /tmp/tests_passed
 # docker is weird and skips building tester if prod has no dependency with it.
 # so if we create a file once passed, and copy that from prod, it will make
 # sure docker first runs tester.

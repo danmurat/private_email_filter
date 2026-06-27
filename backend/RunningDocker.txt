@@ -7,9 +7,65 @@ our models (also data if we want to train new models. Not important right now th
 # assuming you run from /backend
 docker build --platform linux/amd64 -t priv-mail-server .
 # important to open up port 8000 in the container
-docker run --platform linux/amd64 -p 8000:8000 priv-mail-server
+docker run --platform linux/amd64 -p 80:8000 priv-mail-server
+
+# -p here is port <host>:<container>
+# allowing HTTP on AWS apparantly opens port 80 specifically, so <host> here should be 80
+# and we should be able to access the server on clienttest/test_client.py
 
 # if you build/run from root, add backend instead of the dot (.) (this is what we do in integrate.yml because github builds from root)
 
+# running on AWS (platform flag not needed. it will be native)
+docker run -p 80:8000 priv-mail-server
+
+# PUSH to docker hub. This will be stored in cloud, and AWS can pull the image to use
+docker tag priv-mail-server:latest danmurat/priv-mail-server:latest # make name changed with username first
+docker push danmurat/priv-mail-server:latest
+
+
 # if you want to go inside the container's shell and do whatever, run below:
 docker exec -it <CONTAINER_ID_OR_NAME> /bin/bash
+
+
+# ----- With docker compose (including nginx container) --------
+
+# build and run (specify path if from root) path = backend/docker-compose.yml
+docker compose -f backend/docker-compose.yml up --build -d
+
+# (down instead removes containers too)
+docker compose -f backend/docker-compose.yml stop
+
+# just run (-d = detached, which means runs in background, like doesn't appear in terminal)
+docker compose up -d
+
+# view logs for testing (go into backend/ dir, othewise specify the .yml file path):
+docker compose logs -f
+
+
+------- Notes on building locally vs cloud ---------
+
+The way we compose will be done the same way on AWS. That is, compose builds first an image
+from the Dockerfile (which tests then runs the backend). Then we build a specific nginx
+image too, with the config file passed to it. Running this through compose allows for
+the reverse proxy set up we need.
+
+Importantly, we will still need to build a seperate server image alone! This is what gets
+saved to docker hub that AWS automatically pulls from during build. AWS does:
+- build server image from hub (instead of docker file)
+- then builds nginx (from the conf file we paste into 'user data')
+- compose runs these (compose file pasted too)
+
+This should allow correct rate-limiting that we've set up.
+
+We compose locally for development, to ensure all works as intended.
+We MUST build and push a seperate server image for our current dockerfile (with all progress thusfar)
+
+
+
+
+
+
+
+
+
+
