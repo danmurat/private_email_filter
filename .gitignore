@@ -2,6 +2,7 @@ ml/models/
 ml/dataset/
 ml/notebooks/
 clienttest/data/
+zama_models/
 .venv/
 .artifacts/
 .idea/
