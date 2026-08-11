@@ -34,7 +34,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd ml
-          python -m pytest
+          python -m pytest . --ignore=test/local
 
       - name: Build & boot server stack
         run: docker compose -f backend/docker-compose.yml up --build -d
