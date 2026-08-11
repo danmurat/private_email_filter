@@ -114,7 +114,7 @@ class PreProcess:
         tfidf_test = tfidf_vec.transform(test_text)
 
         # so we can call later for single email processing
-        util.save_model_pickle(tfidf_vec, c.TFIDF_MODEL_KEY)
+        util.save_cloud_model(tfidf_vec, c.TFIDF_MODEL_KEY)
 
         self.v_train_text = tfidf_train
         self.v_test_text = tfidf_test
