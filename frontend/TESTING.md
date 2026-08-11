@@ -25,6 +25,20 @@ npx jest --coverage
 npx jest Login
 ```
 
+The Python/TypeScript preprocessing equivalence check runs the fitted pickle models through
+scikit-learn inside Pyodide, then compares the results with the TypeScript TF-IDF and SVD
+functions. It is intentionally separate from Jest because it downloads and starts a Python/WASM
+runtime:
+
+```sh
+npm run test:pyodide
+```
+
+The check uses the current Pyodide scikit-learn build to load the models, so it may print a
+scikit-learn version compatibility warning when the fitted pickles were created with another
+version. The numerical comparison fails if results differ beyond the configured floating-point
+tolerance.
+
 ## Where tests live
 
 Tests live in a top-level `__tests__/` directory (not inside `app/`). Expo Router treats every

@@ -28,13 +28,20 @@ def save_model_pickle(model: Any, name: str) -> None:
     with open(f"models/pickle_objects/{name}.pkl", "wb") as file:
         pickle.dump(model, file)
 
+
 def load_model_pickle(name: str) -> Any:
     with open(f"models/pickle_objects/{name}.pkl", "rb") as file:
         return pickle.load(file)
 
+
 def save_cloud_model(model: Any, name: str) -> None:
     with open(f"models/cloud/{name}.pkl", "wb") as file:
         cloudpickle.dump(model, file)
+
+
+def load_cloud_model(name: str) -> Any:
+    with open(f"models/cloud/{name}.pkl", "rb") as file:
+        return cloudpickle.load(file)
 
 # the tenseal and pailier models utilise torch tensors for the gradient descent algs
 def convert_to_torch_tensors(
@@ -67,6 +74,7 @@ def svd_data(X_train, X_test, n) -> tuple:
     svd = TruncatedSVD(n_components=n)
     red_X_train = svd.fit_transform(X_train)
     red_X_test = svd.transform(X_test)
+    save_cloud_model(svd, c.SVD_MODEL_KEY)
 
     return red_X_train, red_X_test
 

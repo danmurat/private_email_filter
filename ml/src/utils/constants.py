@@ -1,4 +1,5 @@
 TFIDF_MODEL_KEY = "tfidf"
+SVD_MODEL_KEY = "svd"
 PCA_MODEL_KEY = "pca"
 MODEL_DATA_KEY = "model_data"
 REDUCED_MODEL_DATA_KEY = "reduced_model_data"

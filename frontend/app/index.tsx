@@ -30,7 +30,6 @@ export default function Index() {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       {/* Hidden WebView keeps the SEAL WASM context warm on mobile */}
       {Platform.OS !== 'web' && (
@@ -109,7 +108,6 @@ export default function Index() {
 
       </View>
     </View>
-    </TouchableWithoutFeedback>
   );
 }
 
