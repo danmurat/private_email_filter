@@ -15,3 +15,16 @@ simply be here, already, in a nice, lean package).
 Since we're seperating the backend from the ml, we'll need to handle preprocessing
 here too (just copy paste what's needed for a single email. Preprocessing only needed
 if a user sends their own pasted email in).
+
+## Browser raw-SEAL endpoint
+
+`POST /spamfilter/seal` accepts raw Microsoft SEAL serialization from the
+browser (`parameters_file`, `galois_keys_file`, and `enc_email_file`, plus
+protocol metadata) and returns a raw ciphertext. The server never receives the
+client secret key. Set `CORS_ORIGINS` to the deployed HTTPS frontend origin(s)
+instead of the development default `*`.
+
+The lean CKKS profile used by the demo is intentionally small and uses
+`security_level=-1`; it must not be presented as production-strength
+cryptography. Deploy the API behind HTTPS and review the parameters before any
+real data is processed.
