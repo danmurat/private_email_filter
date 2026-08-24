@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import {
-  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
+
+import { classifyEmail, type Prediction } from '@/lib/sealClient';
 
 // Placeholder emails — will be replaced with real test set
 const TEST_EMAILS = [
@@ -28,6 +28,34 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState<Tab>('paste');
   const [pastedText, setPastedText] = useState('');
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [isEncrypting, setIsEncrypting] = useState(false);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedEmail = TEST_EMAILS.find((email) => email.id === selectedEmailId);
+  const emailText = activeTab === 'paste' ? pastedText : selectedEmail?.preview ?? '';
+
+  async function handleEncrypt() {
+    if (!emailText.trim()) {
+      setError('Enter an email or select a test email first.');
+      return;
+    }
+    if (Platform.OS !== 'web') {
+      setError('The browser CKKS client is currently available on Expo web only.');
+      return;
+    }
+
+    setIsEncrypting(true);
+    setPrediction(null);
+    setError(null);
+    try {
+      setPrediction(await classifyEmail(emailText));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Encrypted prediction failed.');
+    } finally {
+      setIsEncrypting(false);
+    }
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
@@ -101,9 +129,22 @@ export default function Index() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.encryptButton} activeOpacity={0.8}>
-            <Text style={styles.encryptButtonText}>Encrypt</Text>
+          <TouchableOpacity
+            style={[styles.encryptButton, isEncrypting && styles.encryptButtonDisabled]}
+            activeOpacity={0.8}
+            disabled={isEncrypting}
+            onPress={handleEncrypt}
+          >
+            <Text style={styles.encryptButtonText}>
+              {isEncrypting ? 'Encrypting…' : 'Encrypt'}
+            </Text>
           </TouchableOpacity>
+          {prediction && (
+            <Text style={styles.resultText}>
+              {prediction.classification === 'spam' ? 'SPAM' : 'HAM'} (score {prediction.score.toFixed(3)})
+            </Text>
+          )}
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
 
       </View>
@@ -223,5 +264,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  encryptButtonDisabled: {
+    opacity: 0.6,
+  },
+  resultText: {
+    marginTop: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1c1c1e',
+  },
+  errorText: {
+    marginTop: 12,
+    maxWidth: 360,
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#c00',
   },
 });

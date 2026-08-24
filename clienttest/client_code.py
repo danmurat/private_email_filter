@@ -74,12 +74,22 @@ def setup_ts_params() -> Context:
 # testing. We should be able to have lower values for this?? We go from dimensions=5000+ to 200
 # this is giving us ~4ms inference. We can't seem to go lower than 2^12 though?
 def setup_lean_ts_params() -> Context:
-    poly_mod_degree = (
-        2**12
-    )  # 2^12 = 4096 basic (must be pow 2) -- lower = more efficient
-    coeff_mod_bit_sizes = [40, 20, 40]
+    # The encrypted SVM performs one ciphertext-plaintext multiplication in
+    # CKKSVector.dot(). TenSEAL then rescales it once.  The scale therefore
+    # has to match the modulus removed by that rescale (29 bits here).
+    #
+    # 4096/[40, 20, 40] with scale 2**10 is not a low-precision version of
+    # this circuit: after multiplication/rescaling it has effectively lost
+    # the scale needed to represent the score. Encryption randomness then
+    # becomes visible as large, classification-changing errors.
+    #
+    # 4096 is sufficient for the 150-value vector (it has 2048 CKKS slots).
+    # This profile uses the full 109-bit coefficient-modulus limit for a
+    # 4096-degree ring at the standard 128-bit security level.
+    poly_mod_degree = 2**12
+    coeff_mod_bit_sizes = [40, 29, 40]
     ctx_eval = ts.context(ts.SCHEME_TYPE.CKKS, poly_mod_degree, -1, coeff_mod_bit_sizes)
-    ctx_eval.global_scale = 2**10
+    ctx_eval.global_scale = 2**29
     ctx_eval.generate_galois_keys()
 
     return ctx_eval

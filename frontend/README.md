@@ -48,3 +48,16 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Encrypted web demo configuration
+
+Set `EXPO_PUBLIC_API_URL` to the backend origin before starting Expo. The
+browser client uses the raw Microsoft SEAL endpoint at `/spamfilter/seal`,
+while the existing TenSEAL endpoint at `/spamfilter/ts` remains available for
+Python regression tests. Use an HTTPS API when deploying the web app; the
+client rejects non-HTTPS production URLs.
+
+The demo deliberately uses the lean CKKS profile (`4096`, `[40, 20, 40]`,
+scale `2**10`, and security level `-1`) so it fits in a browser. This is not a
+production-strength security configuration. A production deployment needs a
+security-reviewed parameter set and authenticated transport/origin policy.
