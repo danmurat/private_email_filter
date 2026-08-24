@@ -45,7 +45,7 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
-    "@testing-library/react-native": "^14.0.1",
+    "@testing-library/react-native": "^13.3.3",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
@@ -53,6 +53,7 @@
     "jest": "~29.7.0",
     "jest-expo": "~54.0.17",
     "pyodide": "^314.0.3",
+    "react-test-renderer": "19.1.0",
     "tsx": "^4.23.12",
     "typescript": "~5.9.2"
   },
