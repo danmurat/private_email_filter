@@ -17,6 +17,18 @@ export type Prediction = {
 };
 
 export type SealFactory = () => Promise<SEALLibrary>;
+export type SealClientOptions = {
+  apiUrl?: string;
+  fetchImpl?: FetchLike;
+  sealFactory?: SealFactory;
+};
+
+export type EncryptedSvdVector = {
+  /** A readable representation of the encrypted vector for the demo UI. */
+  ciphertext: string;
+  classify: () => Promise<Prediction>;
+  dispose: () => void;
+};
 
 type FetchLike = typeof fetch;
 
@@ -74,20 +86,23 @@ function appendBinary(form: FormData, name: string, bytes: Uint8Array, filename:
 }
 
 /**
- * Encrypt and classify one 150-value SVD vector.
- *
- * The secret key is held only by this invocation.  The multipart form contains
- * parameters, Galois keys, ciphertext, and protocol metadata; it never
- * contains the public or secret key.
+ * Format the serialized ciphertext without exposing any key material.
  */
-export async function classifySvdVector(
+export function formatCiphertext(bytes: Uint8Array): string {
+  return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * Encrypt one 150-value SVD vector and return a session that can classify it later.
+ *
+ * The session keeps the secret key and SEAL context alive between the two user actions.
+ * Calling dispose releases those WASM resources and should happen once the session is no
+ * longer needed.
+ */
+export async function encryptSvdVector(
   vector: ArrayLike<number>,
-  options: {
-    apiUrl?: string;
-    fetchImpl?: FetchLike;
-    sealFactory?: SealFactory;
-  } = {},
-): Promise<Prediction> {
+  options: SealClientOptions = {},
+): Promise<EncryptedSvdVector> {
   validateSvdVector(vector);
   const apiUrl = validateApiUrl(options.apiUrl ?? getApiUrl());
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -105,8 +120,27 @@ export async function classifySvdVector(
   let decryptor: ReturnType<SEALLibrary['Decryptor']> | undefined;
   let plainText: ReturnType<SEALLibrary['PlainText']> | undefined;
   let cipherText: CipherText | undefined;
-  let resultCipherText: ReturnType<SEALLibrary['CipherText']> | undefined;
-  let resultPlainText: ReturnType<SEALLibrary['PlainText']> | undefined;
+  let disposed = false;
+  let sessionReady = false;
+
+  const disposeSession = (): void => {
+    if (disposed) {
+      return;
+    }
+    disposed = true;
+    dispose(decryptor);
+    dispose(cipherText as { delete: () => void } | undefined);
+    dispose(plainText);
+    dispose(encryptor);
+    dispose(encoder);
+    dispose(galoisKeys);
+    dispose(publicKey);
+    dispose(secretKey);
+    dispose(keyGenerator);
+    dispose(context);
+    dispose(coefficientModulus);
+    dispose(parameters);
+  };
 
   try {
     parameters = seal.EncryptionParameters(seal.SchemeType.ckks);
@@ -132,55 +166,99 @@ export async function classifySvdVector(
     cipherText = seal.CipherText();
     encryptor.encrypt(plainText, cipherText);
 
-    const form = new FormData();
-    appendBinary(form, 'parameters_file', parameters.saveArray(), 'parameters.bin');
-    appendBinary(form, 'galois_keys_file', galoisKeys.saveArray(), 'galois-keys.bin');
-    appendBinary(form, 'enc_email_file', cipherText.saveArray(), 'enc-email.bin');
-    form.append('protocol_version', SEAL_PROTOCOL_VERSION);
-    form.append('vector_length', String(SEAL_VECTOR_LENGTH));
+    const ciphertext = formatCiphertext(cipherText.saveArray());
 
-    const response = await fetchImpl(`${apiUrl}/spamfilter/seal`, {
-      method: 'POST',
-      body: form,
-    });
-    if (!response.ok) {
-      throw new Error(`Encrypted prediction failed (${response.status})`);
-    }
-
-    resultCipherText = seal.CipherText();
-    resultCipherText.loadArray(context, new Uint8Array(await response.arrayBuffer()));
-    decryptor = seal.Decryptor(context, secretKey);
-    resultPlainText = seal.PlainText();
-    decryptor.decrypt(resultCipherText, resultPlainText);
-    const decoded = encoder.decode(resultPlainText);
-    const score = decoded[0]; // result lies in [0] which contains the dot product sum - bias for the prediction
-    if (!Number.isFinite(score)) {
-      throw new Error('SEAL returned a non-finite prediction score');
-    }
-    return { score, classification: classifyScore(score) };
-  } finally {
-    // node-seal wraps C++ objects: JavaScript GC does not release their WASM
-    // allocations, so every object created above is explicitly destroyed.
-    dispose(resultPlainText);
-    dispose(resultCipherText);
-    dispose(decryptor);
-    dispose(cipherText as { delete: () => void } | undefined);
+    // These objects are only needed during encryption. Keep the secret key, context,
+    // encoder, parameters, keys, and ciphertext for the later classification action.
     dispose(plainText);
+    plainText = undefined;
     dispose(encryptor);
-    dispose(encoder);
-    dispose(galoisKeys);
+    encryptor = undefined;
     dispose(publicKey);
-    dispose(secretKey);
+    publicKey = undefined;
     dispose(keyGenerator);
-    dispose(context);
-    dispose(coefficientModulus);
-    dispose(parameters);
+    keyGenerator = undefined;
+
+    const classify = async (): Promise<Prediction> => {
+      if (disposed || !context || !secretKey || !encoder || !cipherText) {
+        throw new Error('Encrypted session is no longer available');
+      }
+
+      let resultCipherText: ReturnType<SEALLibrary['CipherText']> | undefined;
+      let resultPlainText: ReturnType<SEALLibrary['PlainText']> | undefined;
+      try {
+        const form = new FormData();
+        appendBinary(form, 'parameters_file', parameters!.saveArray(), 'parameters.bin');
+        appendBinary(form, 'galois_keys_file', galoisKeys!.saveArray(), 'galois-keys.bin');
+        appendBinary(form, 'enc_email_file', cipherText.saveArray(), 'enc-email.bin');
+        form.append('protocol_version', SEAL_PROTOCOL_VERSION);
+        form.append('vector_length', String(SEAL_VECTOR_LENGTH));
+
+        const response = await fetchImpl(`${apiUrl}/spamfilter/seal`, {
+          method: 'POST',
+          body: form,
+        });
+        if (!response.ok) {
+          throw new Error(`Encrypted prediction failed (${response.status})`);
+        }
+
+        resultCipherText = seal.CipherText();
+        resultCipherText.loadArray(context, new Uint8Array(await response.arrayBuffer()));
+        decryptor = seal.Decryptor(context, secretKey);
+        resultPlainText = seal.PlainText();
+        decryptor.decrypt(resultCipherText, resultPlainText);
+        const decoded = encoder.decode(resultPlainText);
+        const score = decoded[0]; // The result contains the dot product sum - bias.
+        if (!Number.isFinite(score)) {
+          throw new Error('SEAL returned a non-finite prediction score');
+        }
+        return { score, classification: classifyScore(score) };
+      } finally {
+        dispose(resultPlainText);
+        dispose(resultCipherText);
+        dispose(decryptor);
+        decryptor = undefined;
+      }
+    };
+
+    sessionReady = true;
+    return { ciphertext, classify, dispose: disposeSession };
+  } finally {
+    if (!sessionReady) {
+      disposeSession();
+    }
+  }
+}
+
+export async function encryptEmail(
+  text: string,
+  options?: SealClientOptions,
+): Promise<EncryptedSvdVector> {
+  return encryptSvdVector(transformEmailToSvd(text), options);
+}
+
+/**
+ * Encrypt and classify one 150-value SVD vector in a single call for backwards compatibility.
+ *
+ * The secret key is held only by this invocation.  The multipart form contains
+ * parameters, Galois keys, ciphertext, and protocol metadata; it never
+ * contains the public or secret key.
+ */
+export async function classifySvdVector(
+  vector: ArrayLike<number>,
+  options: SealClientOptions = {},
+): Promise<Prediction> {
+  const encrypted = await encryptSvdVector(vector, options);
+  try {
+    return await encrypted.classify();
+  } finally {
+    encrypted.dispose();
   }
 }
 
 export async function classifyEmail(
   text: string,
-  options?: Parameters<typeof classifySvdVector>[1],
+  options?: SealClientOptions,
 ): Promise<Prediction> {
   return classifySvdVector(transformEmailToSvd(text), options);
 }

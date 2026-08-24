@@ -16,15 +16,15 @@ same_email = red_X_test[same_index]
 
 
 def main() -> None:
-    print(f"Email no. {same_index}")
-    util.print_selected_test_email(same_index)
+    print(f"Email no. {index}")
+    util.print_selected_test_email(index)
 
     try:
         choice = input("\nEncrypt email? (y): \n")
         if choice == "n":
             sys.exit()
 
-        data, ctx = _ts_data_to_send_static()
+        data, ctx = _ts_data_to_send()
 
         choice = input("\nSend for classification? (y): \n")
         if choice == "n":

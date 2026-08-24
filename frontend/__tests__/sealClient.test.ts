@@ -1,6 +1,6 @@
 import {
   classifyScore,
-  classifySvdVector,
+  encryptSvdVector,
   SEAL_VECTOR_LENGTH,
   validateSvdVector,
 } from '@/lib/sealClient';
@@ -21,7 +21,7 @@ describe('seal client helpers', () => {
     expect(() => validateSvdVector(vector)).toThrow('non-finite');
   });
 
-  it('does not put secret-key material in the multipart request and cleans up', async () => {
+  it('separates encryption from classification and cleans up key material', async () => {
     const deleted = new Map<string, number>();
     const object = <T extends object>(name: string, extra: T = {} as T) => {
       deleted.set(name, 0);
@@ -63,7 +63,9 @@ describe('seal client helpers', () => {
       Decryptor: () => object('decryptor', { decrypt: () => undefined }),
     };
     let requestBody: FormData | undefined;
+    let requestCount = 0;
     const fetchImpl = async (_url: RequestInfo | URL, init?: RequestInit) => {
+      requestCount += 1;
       requestBody = init?.body as FormData;
       return {
         ok: true,
@@ -72,13 +74,17 @@ describe('seal client helpers', () => {
       } as Response;
     };
 
-    await expect(
-      classifySvdVector(new Float64Array(SEAL_VECTOR_LENGTH), {
-        apiUrl: 'http://localhost:8000',
-        fetchImpl,
-        sealFactory: async () => fakeSeal as never,
-      }),
-    ).resolves.toEqual({ score: 1, classification: 'spam' });
+    const encrypted = await encryptSvdVector(new Float64Array(SEAL_VECTOR_LENGTH), {
+      apiUrl: 'http://localhost:8000',
+      fetchImpl,
+      sealFactory: async () => fakeSeal as never,
+    });
+
+    expect(requestCount).toBe(0);
+    expect(encrypted.ciphertext).toBe('0x010203');
+    await expect(encrypted.classify()).resolves.toEqual({ score: 1, classification: 'spam' });
+    encrypted.dispose();
+    expect(requestCount).toBe(1);
 
     for (const field of [
       'enc_email_file',
