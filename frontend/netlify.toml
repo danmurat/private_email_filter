@@ -1,0 +1,7 @@
+# browser blocks https to http fetch (which we need to send and recieve from our http aws server)
+# we can do a proxy redirect to avoid this.
+[[redirects]]
+  from = "/spamfilter/seal"
+  to = "http://35.178.170.58:80/spamfilter/seal"
+  status = 200
+  force = true
